@@ -11,7 +11,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -20,6 +20,8 @@ jobs:
 
     - name: Install dependencies
       run: |
+        python -m venv env
+        source env/bin/activate
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
@@ -34,10 +36,11 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Run model training
       run: |
+        source env/bin/activate
         python model_training.py
 
   validate_model:
@@ -46,10 +49,11 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Run model validation
       run: |
+        source env/bin/activate
         python validate_model.py
 
   publish_model:
@@ -58,8 +62,9 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Publish model to Hugging Face
       run: |
+        source env/bin/activate
         python publish_to_hf.py
