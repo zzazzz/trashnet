@@ -57,7 +57,6 @@ model = Swinv2ForImageClassification.from_pretrained(
     label2id=label2id,
     ignore_mismatched_sizes=True,
 )
-model.to("cuda")
 
 # Optimizer dan Scheduler
 optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
