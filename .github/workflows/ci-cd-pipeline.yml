@@ -20,16 +20,16 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m venv env
-        source env/bin/activate
+        python -m venv venv  # Create virtual environment named venv
+        source venv/bin/activate  # Activate the virtual environment
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r requirements.txt  # Install dependencies
 
     - name: Log in to WandB
       run: |
-        source env/bin/activate
+        source venv/bin/activate  # Activate the virtual environment
         echo "WANDB_API_KEY=${{ secrets.WANDB_API_KEY }}" >> $GITHUB_ENV
-        wandb login ${{ secrets.WANDB_API_KEY }}
+        wandb login ${{ secrets.WANDB_API_KEY }}  # Login to WandB
 
   train_model:
     needs: setup
@@ -41,8 +41,8 @@ jobs:
 
     - name: Run model training
       run: |
-        source env/bin/activate
-        python model_training.py
+        source venv/bin/activate  # Activate the virtual environment
+        python model_training.py  # Run the model training script
 
   validate_model:
     needs: train_model
@@ -54,8 +54,8 @@ jobs:
 
     - name: Run model validation
       run: |
-        source env/bin/activate
-        python validate_model.py
+        source venv/bin/activate  # Activate the virtual environment
+        python validate_model.py  # Run model validation script
 
   publish_model:
     needs: validate_model
@@ -67,5 +67,5 @@ jobs:
 
     - name: Publish model to Hugging Face
       run: |
-        source env/bin/activate
-        python publish_to_hf.py
+        source venv/bin/activate  # Activate the virtual environment
+        python publish_to_hf.py  # Publish the model to Hugging Face
