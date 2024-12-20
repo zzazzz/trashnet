@@ -9,7 +9,7 @@ from torchvision.transforms import Compose, Resize, GaussianBlur, RandomAdjustSh
 
 # Load model and processor
 model = Swinv2ForImageClassification.from_pretrained("model")
-model.to("cuda")
+image_processor = AutoImageProcessor.from_pretrained("model")
 
 # Load the dataset
 data_dir = "data"
@@ -32,7 +32,7 @@ test_ds = ds["test"].map(preprocess_test, remove_columns=["image"])
 
 # Function for predictions
 def predict(model, image):
-    inputs = image_processor(images=image, return_tensors="pt").to(device)
+    inputs = image_processor(images=image, return_tensors="pt")
     outputs = model(**inputs)
     logits = outputs.logits
     predicted_class_idx = logits.argmax(-1).item()

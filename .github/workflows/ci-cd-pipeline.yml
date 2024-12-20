@@ -73,6 +73,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    - name: Log in to Hugging Face
+      run: |
+        echo "HF_API_KEY=${{ secrets.HF_API_KEY }}" >> $GITHUB_ENV
+        huggingface-cli login --token ${{ secrets.HF_API_KEY }}
+
     - name: Publish model to Hugging Face
       run: |
         python publish_to_hf.py
