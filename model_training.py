@@ -1,11 +1,11 @@
 import wandb
-from transformers import Swinv2ForImageClassification, AutoImageProcessor, TrainingArguments, Trainer
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Resize, GaussianBlur, RandomAdjustSharpness, RandomEqualize, ToTensor
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from transformers import get_linear_schedule_with_warmup
 import torch.optim as optim
+from transformers import Swinv2ForImageClassification, AutoImageProcessor, TrainingArguments, Trainer
 
 # Initialize wandb
 wandb.login()
