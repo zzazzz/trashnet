@@ -6,31 +6,6 @@ on:
       - main  # Trigger on push to the main branch
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11.7'
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-
-    - name: Verify installed packages
-      run: |
-        pip list
-
-    - name: Log in to WandB
-      run: |
-        echo "WANDB_API_KEY=${{ secrets.WANDB_API_KEY }}" >> $GITHUB_ENV
-        wandb login ${{ secrets.WANDB_API_KEY }}
 
   train_model:
     needs: setup
@@ -49,6 +24,11 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+
+    - name: Log in to WandB
+      run: |
+        echo "WANDB_API_KEY=${{ secrets.WANDB_API_KEY }}" >> $GITHUB_ENV
+        wandb login ${{ secrets.WANDB_API_KEY }}
 
     - name: Run model training
       run: |
