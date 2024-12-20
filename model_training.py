@@ -1,9 +1,4 @@
 import wandb
-import datasets
-import transformers
-import torchvision
-import torch
-import sklearn
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Resize, GaussianBlur, RandomAdjustSharpness, RandomEqualize, ToTensor
@@ -23,7 +18,7 @@ config.batch_size = 32
 config.epochs = 20
 
 # Load the dataset
-data_dir = "trashnet_split"
+data_dir = "data"
 ds = load_dataset("imagefolder", data_dir=data_dir)
 
 labels = ds["train"].features["label"].names

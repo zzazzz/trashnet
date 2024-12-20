@@ -12,7 +12,7 @@ model = Swinv2ForImageClassification.from_pretrained("model")
 model.to("cuda")
 
 # Load the dataset
-data_dir = "trashnet_split"
+data_dir = "data"
 ds = load_dataset("imagefolder", data_dir=data_dir)
 
 # Preprocessing
