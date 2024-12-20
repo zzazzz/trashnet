@@ -1,4 +1,9 @@
 import wandb
+import datasets
+import transformers
+import torchvision
+import torch
+import sklearn
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Resize, GaussianBlur, RandomAdjustSharpness, RandomEqualize, ToTensor
