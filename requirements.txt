@@ -1,11 +1,11 @@
 torch
-numpy
-matplotlib
-datasets
 transformers
-sklearn
+datasets
 wandb
-os
-torchvision
+scikit-learn
 seaborn
 Pillow
+torchvision
+matplotlib
+scipy
+huggingface_hub
