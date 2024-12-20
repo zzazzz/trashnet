@@ -8,7 +8,7 @@ from transformers import get_linear_schedule_with_warmup
 from transformers import Swinv2ForImageClassification, AutoImageProcessor, TrainingArguments, Trainer
 
 # Initialize wandb
-wandb.login(secrets.WANDB_API_KEY)
+wandb.login()
 wandb.init(project="trashnet_classification", entity="ziyad-azzufari")
 
 # Membuat konfigurasi untuk eksperimen
