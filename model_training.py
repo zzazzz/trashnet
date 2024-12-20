@@ -6,6 +6,7 @@ from torchvision.transforms import Compose, Resize, GaussianBlur, RandomAdjustSh
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from transformers import get_linear_schedule_with_warmup
 from transformers import Swinv2ForImageClassification, AutoImageProcessor, TrainingArguments, Trainer
+from transformers.integrations import WandbCallback
 
 # Initialize wandb
 wandb.login()
