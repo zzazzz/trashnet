@@ -1,5 +1,4 @@
 import wandb
-import torch
 from transformers import Swinv2ForImageClassification, Swinv2ImageProcessor
 from datasets import load_dataset
 from torch.utils.data import DataLoader
