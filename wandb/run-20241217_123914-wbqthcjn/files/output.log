@@ -1,0 +1,37 @@
+You are adding a <class 'transformers.integrations.integration_utils.WandbCallback'> to the callbacks of this Trainer, but there is already one. The currentlist of callbacks is
+:DefaultFlowCallback
+WandbCallback
+You are adding a <class 'transformers.integrations.integration_utils.WandbCallback'> to the callbacks of this Trainer, but there is already one. The currentlist of callbacks is
+:DefaultFlowCallback
+WandbCallback
+You are adding a <class 'transformers.integrations.integration_utils.WandbCallback'> to the callbacks of this Trainer, but there is already one. The currentlist of callbacks is
+:DefaultFlowCallback
+WandbCallback
+***** eval metrics *****
+  epoch                   =       20.0
+  eval_accuracy           =     0.9577
+  eval_f1                 =     0.9563
+  eval_loss               =     0.2858
+  eval_precision          =     0.9598
+  eval_recall             =     0.9577
+  eval_runtime            = 0:00:50.92
+  eval_samples_per_second =     14.846
+  eval_steps_per_second   =      0.236
+Evaluating:   0%|          | 0/763 [00:00<?, ?it/s]
+Evaluating:   0%|          | 0/763 [00:00<?, ?it/s]
+  0%|          | 0/763 [00:00<?, ?it/s]
+Classification Report:
+               precision    recall  f1-score   support
+
+   cardboard       0.88      0.96      0.92       122
+       glass       0.95      0.81      0.88       151
+       metal       0.81      0.91      0.86       123
+       paper       0.85      0.92      0.88       179
+     plastic       0.82      0.82      0.82       146
+       trash       1.00      0.50      0.67        42
+
+    accuracy                           0.86       763
+   macro avg       0.88      0.82      0.84       763
+weighted avg       0.87      0.86      0.86       763
+
+Save time (sec): 0.25472426414489746

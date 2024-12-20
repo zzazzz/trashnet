@@ -1,0 +1,8 @@
+{"time":"2024-12-17T12:39:16.450280204Z","level":"INFO","msg":"using version","core version":"0.18.7"}
+{"time":"2024-12-17T12:39:16.450306941Z","level":"INFO","msg":"created symlink","path":"/kaggle/working/wandb/run-20241217_123914-wbqthcjn/logs/debug-core.log"}
+{"time":"2024-12-17T12:39:16.553496538Z","level":"INFO","msg":"created new stream","id":"wbqthcjn"}
+{"time":"2024-12-17T12:39:16.55353826Z","level":"INFO","msg":"stream: started","id":"wbqthcjn"}
+{"time":"2024-12-17T12:39:16.553563649Z","level":"INFO","msg":"writer: Do: started","stream_id":"wbqthcjn"}
+{"time":"2024-12-17T12:39:16.553579875Z","level":"INFO","msg":"handler: started","stream_id":"wbqthcjn"}
+{"time":"2024-12-17T12:39:16.553590756Z","level":"INFO","msg":"sender: started","stream_id":"wbqthcjn"}
+{"time":"2024-12-17T12:39:17.01620589Z","level":"INFO","msg":"Starting system monitor"}
