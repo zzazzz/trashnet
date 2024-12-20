@@ -42,7 +42,7 @@ jobs:
     - name: Run model training
       run: |
         source venv/bin/activate  # Activate the virtual environment
-        python model_training.py  # Run the model training script
+        python scripts/model_training.py  # Run the model training script
 
   validate_model:
     needs: train_model
@@ -55,7 +55,7 @@ jobs:
     - name: Run model validation
       run: |
         source venv/bin/activate  # Activate the virtual environment
-        python validate_model.py  # Run model validation script
+        python scripts/validate_model.py  # Run model validation script
 
   publish_model:
     needs: validate_model
@@ -68,4 +68,4 @@ jobs:
     - name: Publish model to Hugging Face
       run: |
         source venv/bin/activate  # Activate the virtual environment
-        python publish_to_hf.py  # Publish the model to Hugging Face
+        python scripts/publish_to_hf.py  # Publish the model to Hugging Face
