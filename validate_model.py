@@ -4,6 +4,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from transformers import AutoModelForImageClassification, AutoImageProcessor
+from PIL import Image
 
 # Load model and processor
 model = AutoModelForImageClassification.from_pretrained("ziyadazz/trashnet-swinTransformers")
