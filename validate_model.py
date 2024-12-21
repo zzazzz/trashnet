@@ -6,10 +6,8 @@ import matplotlib.pyplot as plt
 from transformers import AutoModelForImageClassification, AutoImageProcessor
 
 # Load model and processor
-model = "swin"
-processor = 'processor'
-model = AutoModelForImageClassification.from_pretrained(model)
-image_processor = AutoImageProcessor.from_pretrained(processor)
+model = AutoModelForImageClassification.from_pretrained("swin")
+image_processor = AutoImageProcessor.from_pretrained("processor")
 
 # Fungsi untuk memprediksi satu gambar
 def predict_single_image(image):
