@@ -1,14 +1,12 @@
-import torch
+import os
 from sklearn.metrics import confusion_matrix, classification_report
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from transformers import Swinv2ForImageClassification, AutoImageProcessor
-from datasets import load_dataset
-from torchvision.transforms import Compose, Resize, GaussianBlur, RandomAdjustSharpness, RandomEqualize, ToTensor
 
 # Load model and processor
-model = "model"
+model = "swin"
 processor = 'processor'
 model = Swinv2ForImageClassification.from_pretrained(model)
 image_processor = AutoImageProcessor.from_pretrained(processor)
@@ -22,14 +20,11 @@ def predict_single_image(image):
     return predicted_class_idx
 
 # Direktori dataset test
-test_dir = 'data/test'
-
-labels = ds["test"].features["label"].names
-label2id, id2label = dict(), dict()
-
-for i, label in enumerate(labels):
-    label2id[label] = i
-    id2label[i] = label
+# Membuat id2label dan label2id berdasarkan struktur folder
+test_dir = 'data/test'  # Direktori dataset test
+class_names = sorted(os.listdir(test_dir))  # Mengurutkan nama folder
+id2label = {idx: name for idx, name in enumerate(class_names)}
+label2id = {name: idx for idx, name in id2label.items()}
 
 true_labels = []
 pred_labels = []
