@@ -12,66 +12,62 @@ model = "model"
 model = Swinv2ForImageClassification.from_pretrained(model)
 image_processor = AutoImageProcessor.from_pretrained(model)
 
-# Load the dataset
-data_dir = "data"
-ds = load_dataset("imagefolder", data_dir=data_dir)
-
-# Preprocessing
-_transforms = Compose([
-    Resize((200, 200)),
-    GaussianBlur(kernel_size=(1, 5)),
-    RandomAdjustSharpness(sharpness_factor=2),
-    RandomEqualize(),
-    ToTensor()
-])
-
-def preprocess_test(example):
-    example["pixel_values"] = _transforms(example["image"].convert("RGB"))
-    return example
-
-test_ds = ds["test"].map(preprocess_test, remove_columns=["image"])
-
-# Function for predictions
-def predict(model, image):
-    inputs = image_processor(images=image, return_tensors="pt")
+# Fungsi untuk memprediksi satu gambar
+def predict_single_image(image):
+    inputs = image_processor(images=image, return_tensors="pt").to(device)
     outputs = model(**inputs)
     logits = outputs.logits
     predicted_class_idx = logits.argmax(-1).item()
     return predicted_class_idx
 
-# Evaluate the model
-def evaluate_model(test_ds):
-    true_labels = []
-    pred_labels = []
+# Direktori dataset test
+test_dir = 'data/test'
 
-    for sample in test_ds:
-        pixel_values = sample['pixel_values']
-        true_label = sample['label']
+true_labels = []
+pred_labels = []
+
+# Iterasi semua subfolder dalam direktori test
+for class_idx, class_name in id2label.items():  # id2label harus didefinisikan sebagai {0: "cardboard", 1: "glass", ...}
+    class_folder = os.path.join(test_dir, class_name)
+    if not os.path.isdir(class_folder):
+        continue  # Lewati jika bukan folder
+
+    for image_name in os.listdir(class_folder):
+        image_path = os.path.join(class_folder, image_name)
+        try:
+            # Load image
+            image = Image.open(image_path).convert("RGB")
+            
+            # Predict label
+            predicted_label = predict_single_image(image)
+            
+            # Simpan true dan predicted label
+            true_labels.append(class_idx)
+            pred_labels.append(predicted_label)
         
-        # Get prediction for the image
-        predicted_label = predict(model, pixel_values)
-        
-        true_labels.append(true_label)
-        pred_labels.append(predicted_label)
-    
-    true_labels = np.array(true_labels)
-    pred_labels = np.array(pred_labels)
+        except Exception as e:
+            print(f"Error processing {image_path}: {e}")
 
-    cm = confusion_matrix(true_labels, pred_labels)
-    report = classification_report(true_labels, pred_labels)
+# Konversi ke numpy array
+true_labels = np.array(true_labels)
+pred_labels = np.array(pred_labels)
 
-    return cm, report
+# Confusion Matrix
+cm = confusion_matrix(true_labels, pred_labels)
 
-# Evaluate and plot the confusion matrix
-cm, report = evaluate_model(test_ds)
+# Classification Report
+report = classification_report(true_labels, pred_labels, target_names=id2label.values())
+print("Classification Report:")
+print(report)
+
+# Plot Confusion Matrix
+def plot_confusion_matrix(cm, classes):
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=classes, yticklabels=classes)
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    plt.title('Confusion Matrix')
+    plt.show()
 
 # Plot confusion matrix
-plt.figure(figsize=(10, 7))
-sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=labels, yticklabels=labels)
-plt.xlabel('Predicted')
-plt.ylabel('True')
-plt.title('Confusion Matrix')
-plt.show()
-
-# Print classification report
-print("Classification Report:\n", report)
+plot_confusion_matrix(cm, list(id2label.values()))
