@@ -3,7 +3,7 @@ from sklearn.metrics import confusion_matrix, classification_report
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-from transformers import Swinv2ForImageClassification, Swinv2ImageProcessor
+from transformers import Swinv2ForImageClassification, AutoImageProcessor
 from datasets import load_dataset
 from torchvision.transforms import Compose, Resize, GaussianBlur, RandomAdjustSharpness, RandomEqualize, ToTensor
 
