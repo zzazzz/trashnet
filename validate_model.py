@@ -9,8 +9,9 @@ from torchvision.transforms import Compose, Resize, GaussianBlur, RandomAdjustSh
 
 # Load model and processor
 model = "model"
+processor = 'processor'
 model = Swinv2ForImageClassification.from_pretrained(model)
-image_processor = AutoImageProcessor.from_pretrained(model)
+image_processor = AutoImageProcessor.from_pretrained(processor)
 
 # Fungsi untuk memprediksi satu gambar
 def predict_single_image(image):

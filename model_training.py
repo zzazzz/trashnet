@@ -115,5 +115,5 @@ trainer.train()
 
 # Save the model
 trainer.save_model("model")
-image_processor.save_pretrained('model')
+image_processor.save_pretrained('processor')
 wandb.finish()
