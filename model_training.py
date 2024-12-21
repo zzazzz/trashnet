@@ -10,7 +10,7 @@ from transformers.integrations import WandbCallback
 
 # Initialize wandb
 wandb.login()
-wandb.init(project="trashnet_classification", entity="ziyad-azzufari")
+wandb.init(project="trashnet-classification", entity="ziyad-azzufari")
 
 # Membuat konfigurasi untuk eksperimen
 config = wandb.config

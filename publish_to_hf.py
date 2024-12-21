@@ -8,16 +8,16 @@ processor= "processor"
 # Log in to Hugging Face
 api = HfApi()
 
-# Upload the model
-api.upload_folder(
-    repo_id=model_name,
-    folder_path=model_dir,
-)
-
 # Upload the second folder
 api.upload_folder(
     repo_id=model_name,
     folder_path=processor,
+)
+
+# Upload the model
+api.upload_folder(
+    repo_id=model_name,
+    folder_path=model_dir,
 )
 
 print(f"Model uploaded to Hugging Face Hub: {model_name}")
