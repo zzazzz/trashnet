@@ -14,7 +14,7 @@ image_processor = AutoImageProcessor.from_pretrained(model)
 
 # Fungsi untuk memprediksi satu gambar
 def predict_single_image(image):
-    inputs = image_processor(images=image, return_tensors="pt").to(device)
+    inputs = image_processor(images=image, return_tensors="pt")
     outputs = model(**inputs)
     logits = outputs.logits
     predicted_class_idx = logits.argmax(-1).item()
@@ -22,6 +22,13 @@ def predict_single_image(image):
 
 # Direktori dataset test
 test_dir = 'data/test'
+
+labels = ds["test"].features["label"].names
+label2id, id2label = dict(), dict()
+
+for i, label in enumerate(labels):
+    label2id[label] = i
+    id2label[i] = label
 
 true_labels = []
 pred_labels = []
