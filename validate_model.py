@@ -8,8 +8,9 @@ from datasets import load_dataset
 from torchvision.transforms import Compose, Resize, GaussianBlur, RandomAdjustSharpness, RandomEqualize, ToTensor
 
 # Load model and processor
-model = Swinv2ForImageClassification.from_pretrained("model")
-image_processor = AutoImageProcessor.from_pretrained("model")
+model = "model"
+model = Swinv2ForImageClassification.from_pretrained(model)
+image_processor = AutoImageProcessor.from_pretrained(model)
 
 # Load the dataset
 data_dir = "data"
