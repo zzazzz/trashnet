@@ -32,7 +32,7 @@ for i, label in enumerate(labels):
 # Preprocessing images
 _transforms = Compose([
     Resize((200, 200)),
-    GaussianBlur(kernel_size=(1, 5)),
+    GaussianBlur(kernel_size=(1, 4)),
     RandomAdjustSharpness(sharpness_factor=2),
     RandomEqualize(),
     ToTensor()
@@ -75,7 +75,7 @@ training_args = TrainingArguments(
     num_train_epochs=config.epochs,
     metric_for_best_model="f1",
     load_best_model_at_end=True,
-    report_to="wandb"  # Menggunakan Wandb untuk melacak metrik
+    report_to="wandb"
 )
 
 # Define metrics function
