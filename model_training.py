@@ -32,7 +32,7 @@ for i, label in enumerate(labels):
 # Preprocessing images
 _transforms = Compose([
     Resize((200, 200)),
-    GaussianBlur(kernel_size=(1, 4)),
+    GaussianBlur(kernel_size=(1, 5)),
     RandomAdjustSharpness(sharpness_factor=2),
     RandomEqualize(),
     ToTensor()
