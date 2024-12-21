@@ -3,12 +3,12 @@ from sklearn.metrics import confusion_matrix, classification_report
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-from transformers import Swinv2ForImageClassification, AutoImageProcessor
+from transformers import AutoModelForImageClassification, AutoImageProcessor
 
 # Load model and processor
 model = "swin"
 processor = 'processor'
-model = Swinv2ForImageClassification.from_pretrained(model)
+model = AutoModelForImageClassification.from_pretrained(model)
 image_processor = AutoImageProcessor.from_pretrained(processor)
 
 # Fungsi untuk memprediksi satu gambar
