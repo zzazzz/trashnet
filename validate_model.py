@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from transformers import AutoModelForImageClassification, AutoImageProcessor
 
 # Load model and processor
-model = AutoModelForImageClassification.from_pretrained("swin")
+model = AutoModelForImageClassification.from_pretrained("ziyadazz/trashnet-swinTransformers")
 image_processor = AutoImageProcessor.from_pretrained("processor")
 
 # Fungsi untuk memprediksi satu gambar
