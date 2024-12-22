@@ -33,6 +33,11 @@ jobs:
       run: |
         python model_training.py
 
+    - name: Commit local changes before pulling
+      run: |
+        git add .  # Stage any changes
+        git commit -m "Saving local changes before pulling" || echo "No changes to commit"  # Commit if changes exist
+
     - name: Pull the latest changes from the remote repository
       run: |
         git pull origin main  # Pull the latest changes from the main branch
