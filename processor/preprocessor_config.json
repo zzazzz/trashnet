@@ -1,5 +1,4 @@
 {
-  "do_convert_rgb": null,
   "do_normalize": true,
   "do_rescale": true,
   "do_resize": true,
