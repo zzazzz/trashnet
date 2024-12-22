@@ -16,7 +16,7 @@ wandb.init(project="trashnet-classification", entity="ziyad-azzufari")
 config = wandb.config
 config.learning_rate = 1e-4
 config.batch_size = 32
-config.epochs = 20
+config.epochs = 1
 
 # Load the dataset
 data_dir = "data"
