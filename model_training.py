@@ -1,12 +1,12 @@
 import wandb
 import torch.optim as optim
 from datasets import load_dataset
-from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Resize, GaussianBlur, RandomAdjustSharpness, RandomEqualize, ToTensor
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from transformers import get_linear_schedule_with_warmup
 from transformers import Swinv2ForImageClassification, AutoImageProcessor, TrainingArguments, Trainer
 from transformers.integrations import WandbCallback
+from huggingface_hub import HfApi
 
 # Initialize wandb
 wandb.login()
@@ -116,4 +116,29 @@ trainer.train()
 # Save the model
 trainer.save_model("model")
 image_processor.save_pretrained('processor')
+
+# Define model name and upload directory
+model_name = "ziyadazz/trashnet-swinTransformers"
+model_dir = "model" 
+processor_dir = "processor"
+
+# Log in to Hugging Face
+api = HfApi()
+
+# Upload the processor folder (this will overwrite any existing files with the same name)
+api.upload_folder(
+    repo_id=model_name,
+    folder_path=processor_dir,
+    commit_message="Update processor files"  # Optional: add a commit message for clarity
+)
+
+# Upload the model folder (this will overwrite any existing model files with the same name)
+api.upload_folder(
+    repo_id=model_name,
+    folder_path=model_dir,
+    commit_message="Update model files"  # Optional: add a commit message for clarity
+)
+
+print(f"Model uploaded and files overwritten at Hugging Face Hub: {model_name}")
+
 wandb.finish()

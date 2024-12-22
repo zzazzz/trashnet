@@ -1,0 +1,27 @@
+You are adding a <class 'transformers.integrations.integration_utils.WandbCallback'> to the callbacks of this Trainer, but there is already one. The currentlist of callbacks is
+:DefaultFlowCallback
+WandbCallback
+[34m[1mwandb[0m: [33mWARNING[0m The `run_name` is currently set to the same value as `TrainingArguments.output_dir`. If this was not intended, please specify a different run name by setting the `TrainingArguments.run_name` parameter.
+***** eval metrics *****
+  epoch                   =       20.0
+  eval_accuracy           =     0.9577
+  eval_f1                 =     0.9574
+  eval_loss               =     0.2443
+  eval_precision          =     0.9579
+  eval_recall             =     0.9577
+  eval_runtime            = 0:00:56.53
+  eval_samples_per_second =     13.371
+  eval_steps_per_second   =      0.212
+Classification Report:
+              precision    recall  f1-score   support
+
+   cardboard       0.96      0.98      0.97       122
+       glass       0.95      0.93      0.94       151
+       metal       0.84      0.97      0.90       123
+       paper       0.97      0.97      0.97       179
+     plastic       0.96      0.90      0.93       146
+       trash       0.94      0.71      0.81        42
+
+    accuracy                           0.94       763
+   macro avg       0.94      0.91      0.92       763
+weighted avg       0.94      0.94      0.94       763
