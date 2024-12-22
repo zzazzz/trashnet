@@ -16,7 +16,7 @@ wandb.init(project="trashnet-classification", entity="ziyad-azzufari")
 config = wandb.config
 config.learning_rate = 1e-4
 config.batch_size = 32
-config.epochs = 1
+config.epochs = 20
 
 # Load the dataset
 data_dir = "data"
@@ -68,7 +68,7 @@ training_args = TrainingArguments(
     evaluation_strategy="steps",
     save_strategy="steps",
     logging_steps=10,
-    eval_steps=50,
+    eval_steps=100,
     learning_rate=config.learning_rate,
     per_device_train_batch_size=config.batch_size,
     per_device_eval_batch_size=config.batch_size,
