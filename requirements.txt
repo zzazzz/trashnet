@@ -8,5 +8,5 @@ Pillow
 torchvision
 matplotlib
 scipy
-huggingface_hub[cli]
+huggingface_hub
 accelerate>=0.26.0
