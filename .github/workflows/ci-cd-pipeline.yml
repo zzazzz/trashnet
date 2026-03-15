@@ -1,21 +1,15 @@
 name: Model Training and Evaluation Pipeline
-
 on:
   push:
     branches:
       - main
-
 jobs:
-
   train_model:
     runs-on: ubuntu-latest
-
     env:
       WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
       HF_TOKEN: ${{ secrets.HF_API_KEY }}
-
     steps:
-
     - name: Checkout repository
       uses: actions/checkout@v4
 
@@ -30,34 +24,22 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install huggingface_hub wandb
-        pip install huggingface-cli  # ⬅️ Tambahan untuk CLI
-
-    - name: Install Huggingface CLI (ensure huggingface-cli command is available)
-      run: |
-        pip install huggingface-hub
-        pip install huggingface-cli
 
     - name: Login to Weights & Biases
-      run: |
-        wandb login $WANDB_API_KEY
+      run: wandb login $WANDB_API_KEY
 
-    - name: Login to Huggingface (optional, jika butuh CLI)
-      run: |
-        huggingface-cli login --token $HF_TOKEN
+    - name: Login to Hugging Face
+      run: huggingface-cli login --token $HF_TOKEN
 
     - name: Run model training
-      run: |
-        python model_training.py
+      run: python model_training.py
 
   validate_model:
     needs: train_model
     runs-on: ubuntu-latest
-
     env:
       HF_TOKEN: ${{ secrets.HF_API_KEY }}
-
     steps:
-
     - name: Checkout repository
       uses: actions/checkout@v4
 
@@ -72,17 +54,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install huggingface_hub
-        pip install huggingface-cli  # ⬅️ Tambahan untuk CLI
 
-    - name: Install Huggingface CLI (ensure huggingface-cli command is available)
-      run: |
-        pip install huggingface-hub
-        pip install huggingface-cli
-
-    - name: Login to Huggingface (optional, jika butuh CLI)
-      run: |
-        huggingface-cli login --token $HF_TOKEN
+    - name: Login to Hugging Face
+      run: huggingface-cli login --token $HF_TOKEN
 
     - name: Run model validation
-      run: |
-        python validate_model.py
+      run: python validate_model.py
