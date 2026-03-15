@@ -32,7 +32,7 @@ jobs:
     - name: Log in to Hugging Face
       run: |
         echo "HF_API_KEY=${{ secrets.HF_API_KEY }}" >> $GITHUB_ENV
-        huggingface-cli login --token ${{ secrets.HF_API_KEY }}
+        python -m huggingface_hub.cli.login --token ${{ secrets.HF_API_KEY }}
 
     - name: Run model training
       run: |
