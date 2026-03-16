@@ -13,6 +13,6 @@ login(token="HF_KEY_PLACEHOLDER")
 import shutil
 shutil.copy("/kaggle/input/datasets/ziyadmuhammad/trashnet-training-script/model_training.py", "model_training.py")
 shutil.copy("/kaggle/input/datasets/ziyadmuhammad/trashnet-training-script/requirements.txt", "requirements.txt")
-shutil.copytree("/kaggle/input/datasets/ziyadmuhammad/trashnet-data", "data")
+shutil.copytree("/kaggle/input/trashnet-data", "data")
 
 exec(open("model_training.py").read())
