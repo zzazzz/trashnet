@@ -36,6 +36,13 @@ jobs:
         echo "{\"title\": \"trashnet-training-script\", \"id\": \"$KAGGLE_USERNAME/trashnet-training-script\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > kaggle_upload/dataset-metadata.json
         kaggle datasets create -p kaggle_upload --dir-mode zip || kaggle datasets version -p kaggle_upload -m "Update from GitHub Actions"
 
+    - name: Push data folder to Kaggle dataset
+      env:
+        KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+      run: |
+        echo "{\"title\": \"trashnet-data\", \"id\": \"$KAGGLE_USERNAME/trashnet-data\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > data/dataset-metadata.json
+        kaggle datasets create -p data --dir-mode zip || kaggle datasets version -p data -m "Update from GitHub Actions"
+
     - name: Trigger Kaggle notebook run
       env:
         WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
