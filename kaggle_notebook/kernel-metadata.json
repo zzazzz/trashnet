@@ -1,5 +1,5 @@
 {
-  "id": "ziyadmuhammad/trashnet-training",
+  "id": "ziyadmuhammad/trashnet-training_1",
   "title": "Trashnet Training",
   "code_file": "kernel.py",
   "language": "python",
@@ -9,8 +9,8 @@
   "enable_tpu": false,
   "enable_internet": true,
   "dataset_sources": [
-    "ziyadmuhammad/trashnet-training-script",
-    "ziyadmuhammad/trashnet-data"
+    "ziyadmuhammad/trashnet-training-script_1",
+    "ziyadmuhammad/trashnet-data_1"
   ],
   "competition_sources": [],
   "kernel_sources": []
