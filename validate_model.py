@@ -6,9 +6,15 @@ import numpy as np
 from torchvision import transforms, models
 from torch.utils.data import DataLoader, Dataset
 from sklearn.metrics import confusion_matrix, classification_report
+from huggingface_hub import hf_hub_download, snapshot_download
 from PIL import Image
 import seaborn as sns
 import matplotlib.pyplot as plt
+
+# Download model dari HuggingFace Hub
+repo_id = "ziyadazz/trashnet-resnet50"
+print(f"Downloading model from {repo_id}...")
+snapshot_download(repo_id=repo_id, local_dir="model")
 
 # Load label mappings
 with open("model/id2label.json", "r") as f:
@@ -26,7 +32,7 @@ model.load_state_dict(torch.load("model/resnet50_best.pth", map_location=device)
 model = model.to(device)
 model.eval()
 
-# Transforms (sama dengan val saat training)
+# Transforms
 val_transforms = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
@@ -94,6 +100,5 @@ def plot_confusion_matrix(cm, classes):
     plt.tight_layout()
     plt.savefig("confusion_matrix.png")
     print("Confusion matrix saved to confusion_matrix.png")
-    plt.show()
 
 plot_confusion_matrix(cm, class_names)
