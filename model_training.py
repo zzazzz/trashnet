@@ -1,144 +1,178 @@
 import wandb
+import torch
+import torch.nn as nn
 import torch.optim as optim
 from datasets import load_dataset
-from torchvision.transforms import Compose, Resize, GaussianBlur, RandomAdjustSharpness, RandomEqualize, ToTensor
+from torchvision import transforms, models
+from torch.utils.data import DataLoader, Dataset
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from transformers import get_linear_schedule_with_warmup
-from transformers import Swinv2ForImageClassification, AutoImageProcessor, TrainingArguments, Trainer
-from transformers.integrations import WandbCallback
 from huggingface_hub import HfApi
+from PIL import Image
+import numpy as np
+import json
+import os
 
 # Initialize wandb
 wandb.login()
 wandb.init(project="trashnet-classification", entity="ziyad-azzufari")
 
-# Membuat konfigurasi untuk eksperimen
 config = wandb.config
 config.learning_rate = 1e-4
 config.batch_size = 32
 config.epochs = 20
 
-# Load the dataset
+# Load dataset
 data_dir = "data"
 ds = load_dataset("imagefolder", data_dir=data_dir)
 
 labels = ds["train"].features["label"].names
-label2id, id2label = dict(), dict()
+label2id = {label: i for i, label in enumerate(labels)}
+id2label = {i: label for i, label in enumerate(labels)}
+num_classes = len(labels)
 
-for i, label in enumerate(labels):
-    label2id[label] = i
-    id2label[i] = label
-
-# Preprocessing images
-_transforms = Compose([
-    Resize((200, 200)),
-    GaussianBlur(kernel_size=(1, 5)),
-    RandomAdjustSharpness(sharpness_factor=2),
-    RandomEqualize(),
-    ToTensor()
+# Transforms
+train_transforms = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomVerticalFlip(),
+    transforms.ColorJitter(brightness=0.2, contrast=0.2),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                         std=[0.229, 0.224, 0.225])
 ])
 
-# Preprocess images for the dataset
-def preprocess_train(example):
-    example["pixel_values"] = _transforms(example["image"].convert("RGB"))
-    return example
+val_transforms = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                         std=[0.229, 0.224, 0.225])
+])
 
-train_ds = ds["train"].map(preprocess_train, remove_columns=["image"])
-val_ds = ds["validation"].map(preprocess_train, remove_columns=["image"])
+# Custom Dataset
+class TrashDataset(Dataset):
+    def __init__(self, hf_dataset, transform=None):
+        self.dataset = hf_dataset
+        self.transform = transform
 
-# Memuat model SwinV2 dari Hugging Face
-model_name = "microsoft/swinv2-tiny-patch4-window8-256"
-image_processor = AutoImageProcessor.from_pretrained(model_name)
+    def __len__(self):
+        return len(self.dataset)
 
-# Load the SwinV2 model
-model = Swinv2ForImageClassification.from_pretrained(
-    model_name,
-    num_labels=len(labels),
-    id2label=id2label,
-    label2id=label2id,
-    ignore_mismatched_sizes=True,
-)
+    def __getitem__(self, idx):
+        item = self.dataset[idx]
+        image = item["image"].convert("RGB")
+        label = item["label"]
+        if self.transform:
+            image = self.transform(image)
+        return image, label
 
-# Optimizer dan Scheduler
+train_dataset = TrashDataset(ds["train"], transform=train_transforms)
+val_dataset = TrashDataset(ds["validation"], transform=val_transforms)
+
+train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=2)
+val_loader = DataLoader(val_dataset, batch_size=config.batch_size, shuffle=False, num_workers=2)
+
+# Load pretrained ResNet50
+model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
+model.fc = nn.Linear(model.fc.in_features, num_classes)
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = model.to(device)
+
+# Loss, optimizer, scheduler
+criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
-
-# Tentukan argumen pelatihan
-training_args = TrainingArguments(
-    output_dir="swinv2_output",
-    eval_strategy="steps",
-    save_strategy="steps",
-    logging_steps=10,
-    eval_steps=100,
-    learning_rate=config.learning_rate,
-    per_device_train_batch_size=config.batch_size,
-    per_device_eval_batch_size=config.batch_size,
-    num_train_epochs=config.epochs,
-    metric_for_best_model="f1",
-    load_best_model_at_end=True,
-    report_to="wandb"
-)
-
-# Define metrics function
-def compute_metrics(pred):
-    labels = pred.label_ids
-    preds = pred.predictions.argmax(-1)
-    accuracy = accuracy_score(labels, preds)
-    precision, recall, f1, _ = precision_recall_fscore_support(labels, preds, average='weighted')
-    return {
-        "accuracy": accuracy,
-        "precision": precision,
-        "recall": recall,
-        "f1": f1
-    }
-
-total_steps = len(train_ds) // training_args.per_device_train_batch_size * training_args.num_train_epochs
+total_steps = len(train_loader) * config.epochs
 scheduler = get_linear_schedule_with_warmup(
     optimizer,
     num_warmup_steps=0,
     num_training_steps=total_steps
 )
 
-# Membuat Trainer
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=train_ds,
-    eval_dataset=val_ds,
-    compute_metrics=compute_metrics,
-    processing_class=image_processor,
-    optimizers=(optimizer, scheduler),
-    callbacks=[WandbCallback()]  # Menambahkan callback Wandb untuk pelatihan
-)
+# Training loop
+best_val_f1 = 0.0
 
-# Train the model
-trainer.train()
+for epoch in range(config.epochs):
+    # Train
+    model.train()
+    train_loss = 0.0
+    all_preds, all_labels = [], []
 
-# Save the model
-trainer.save_model("model")
-image_processor.save_pretrained('processor')
+    for images, batch_labels in train_loader:
+        images, batch_labels = images.to(device), batch_labels.to(device)
+        optimizer.zero_grad()
+        outputs = model(images)
+        loss = criterion(outputs, batch_labels)
+        loss.backward()
+        optimizer.step()
+        scheduler.step()
 
-# Define model name and upload directory
-model_name = "ziyadazz/trashnet-swinTransformers"
-model_dir = "model" 
-processor_dir = "processor"
+        train_loss += loss.item()
+        preds = outputs.argmax(dim=1).cpu().numpy()
+        all_preds.extend(preds)
+        all_labels.extend(batch_labels.cpu().numpy())
 
-# Log in to Hugging Face
+    train_acc = accuracy_score(all_labels, all_preds)
+    precision, recall, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='weighted')
+
+    # Validation
+    model.eval()
+    val_loss = 0.0
+    val_preds, val_labels_list = [], []
+
+    with torch.no_grad():
+        for images, batch_labels in val_loader:
+            images, batch_labels = images.to(device), batch_labels.to(device)
+            outputs = model(images)
+            loss = criterion(outputs, batch_labels)
+            val_loss += loss.item()
+            preds = outputs.argmax(dim=1).cpu().numpy()
+            val_preds.extend(preds)
+            val_labels_list.extend(batch_labels.cpu().numpy())
+
+    val_acc = accuracy_score(val_labels_list, val_preds)
+    val_precision, val_recall, val_f1, _ = precision_recall_fscore_support(val_labels_list, val_preds, average='weighted')
+
+    wandb.log({
+        "epoch": epoch + 1,
+        "train_loss": train_loss / len(train_loader),
+        "train_accuracy": train_acc,
+        "train_f1": f1,
+        "val_loss": val_loss / len(val_loader),
+        "val_accuracy": val_acc,
+        "val_f1": val_f1,
+    })
+
+    print(f"Epoch {epoch+1}/{config.epochs} | "
+          f"Train Loss: {train_loss/len(train_loader):.4f} | Train Acc: {train_acc:.4f} | "
+          f"Val Loss: {val_loss/len(val_loader):.4f} | Val Acc: {val_acc:.4f} | Val F1: {val_f1:.4f}")
+
+    # Save best model
+    if val_f1 > best_val_f1:
+        best_val_f1 = val_f1
+        os.makedirs("model", exist_ok=True)
+        torch.save(model.state_dict(), "model/resnet50_best.pth")
+        print(f"  -> Best model saved (val_f1={val_f1:.4f})")
+
+# Save label mappings
+os.makedirs("model", exist_ok=True)
+with open("model/label2id.json", "w") as f:
+    json.dump(label2id, f)
+with open("model/id2label.json", "w") as f:
+    json.dump(id2label, f)
+
+print("Training complete. Uploading to Hugging Face Hub...")
+
+# Upload to Hugging Face Hub
 api = HfApi()
+repo_id = "ziyadazz/trashnet-resnet50"
 
-# Upload the processor folder (this will overwrite any existing files with the same name)
+api.create_repo(repo_id=repo_id, exist_ok=True)
 api.upload_folder(
-    repo_id=model_name,
-    folder_path=processor_dir,
-    commit_message="Update processor files"  # Optional: add a commit message for clarity
+    repo_id=repo_id,
+    folder_path="model",
+    commit_message="Upload ResNet50 trashnet model"
 )
 
-# Upload the model folder (this will overwrite any existing model files with the same name)
-api.upload_folder(
-    repo_id=model_name,
-    folder_path=model_dir,
-    commit_message="Update model files"  # Optional: add a commit message for clarity
-)
-
-print(f"Model uploaded and files overwritten at Hugging Face Hub: {model_name}")
-
+print(f"Model uploaded to: https://huggingface.co/{repo_id}")
 wandb.finish()
