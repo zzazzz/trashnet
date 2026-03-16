@@ -27,13 +27,10 @@ jobs:
 
     - name: Push latest code to Kaggle dataset
       run: |
-        # Upload model_training.py sebagai Kaggle dataset
         mkdir kaggle_upload
         cp model_training.py kaggle_upload/
         cp requirements.txt kaggle_upload/
         cd kaggle_upload
-        kaggle datasets init -p .
-        # Update metadata
         cat > dataset-metadata.json << EOF
         {
           "title": "trashnet-training-script",
@@ -52,16 +49,23 @@ jobs:
         NOTEBOOK_SLUG="${{ secrets.KAGGLE_USERNAME }}/trashnet-training"
         echo "Waiting for notebook to complete..."
         for i in $(seq 1 60); do
-          STATUS=$(kaggle kernels status $NOTEBOOK_SLUG | grep -oP '(?<="status": ")[^"]*')
-          echo "Status: $STATUS (attempt $i/60)"
-          if [ "$STATUS" = "complete" ]; then
+          RAW_STATUS=$(kaggle kernels status $NOTEBOOK_SLUG)
+          echo "Raw status: $RAW_STATUS"
+          
+          if echo "$RAW_STATUS" | grep -q "complete"; then
             echo "Notebook completed successfully!"
             exit 0
-          elif [ "$STATUS" = "error" ]; then
+          elif echo "$RAW_STATUS" | grep -q "error"; then
             echo "Notebook failed!"
-            kaggle kernels output $NOTEBOOK_SLUG
             exit 1
+          elif echo "$RAW_STATUS" | grep -q "running"; then
+            echo "Still running... (attempt $i/60)"
+          elif echo "$RAW_STATUS" | grep -q "queued"; then
+            echo "Still queued... (attempt $i/60)"
+          else
+            echo "Unknown status, continuing... (attempt $i/60)"
           fi
+          
           sleep 60
         done
         echo "Timeout waiting for notebook"
