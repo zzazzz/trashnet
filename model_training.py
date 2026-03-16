@@ -65,7 +65,7 @@ optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
 # Tentukan argumen pelatihan
 training_args = TrainingArguments(
     output_dir="swinv2_output",
-    evaluation_strategy="steps",
+    eval_strategy="steps",
     save_strategy="steps",
     logging_steps=10,
     eval_steps=100,
