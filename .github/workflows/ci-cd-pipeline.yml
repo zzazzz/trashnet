@@ -3,11 +3,74 @@ on:
   push:
     branches:
       - main
+
 jobs:
-  train_model:
+  trigger_kaggle_training:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11.7"
+
+    - name: Install Kaggle CLI
+      run: pip install kaggle
+
+    - name: Setup Kaggle credentials
+      run: |
+        mkdir -p ~/.kaggle
+        echo '{"username":"${{ secrets.KAGGLE_USERNAME }}","key":"${{ secrets.KAGGLE_KEY }}"}' > ~/.kaggle/kaggle.json
+        chmod 600 ~/.kaggle/kaggle.json
+
+    - name: Push latest code to Kaggle dataset
+      run: |
+        # Upload model_training.py sebagai Kaggle dataset
+        mkdir kaggle_upload
+        cp model_training.py kaggle_upload/
+        cp requirements.txt kaggle_upload/
+        cd kaggle_upload
+        kaggle datasets init -p .
+        # Update metadata
+        cat > dataset-metadata.json << EOF
+        {
+          "title": "trashnet-training-script",
+          "id": "${{ secrets.KAGGLE_USERNAME }}/trashnet-training-script",
+          "licenses": [{"name": "CC0-1.0"}]
+        }
+        EOF
+        kaggle datasets create -p . --dir-mode zip || kaggle datasets version -p . -m "Update from GitHub Actions"
+
+    - name: Trigger Kaggle notebook run
+      run: |
+        kaggle kernels push -p kaggle_notebook/
+
+    - name: Wait for Kaggle notebook to complete
+      run: |
+        NOTEBOOK_SLUG="${{ secrets.KAGGLE_USERNAME }}/trashnet-training"
+        echo "Waiting for notebook to complete..."
+        for i in $(seq 1 60); do
+          STATUS=$(kaggle kernels status $NOTEBOOK_SLUG | grep -oP '(?<="status": ")[^"]*')
+          echo "Status: $STATUS (attempt $i/60)"
+          if [ "$STATUS" = "complete" ]; then
+            echo "Notebook completed successfully!"
+            exit 0
+          elif [ "$STATUS" = "error" ]; then
+            echo "Notebook failed!"
+            kaggle kernels output $NOTEBOOK_SLUG
+            exit 1
+          fi
+          sleep 60
+        done
+        echo "Timeout waiting for notebook"
+        exit 1
+
+  validate_model:
+    needs: trigger_kaggle_training
     runs-on: ubuntu-latest
     env:
-      WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
       HF_TOKEN: ${{ secrets.HF_API_KEY }}
     steps:
     - name: Checkout repository
@@ -22,34 +85,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install huggingface_hub wandb
-
-    - name: Login to Weights & Biases
-      run: wandb login $WANDB_API_KEY
-
-    - name: Login to Hugging Face
-      run: python -c "from huggingface_hub import login; login(token='${{ secrets.HF_API_KEY }}')"
-
-    - name: Run model training
-      run: python model_training.py
-
-  validate_model:
-    needs: train_model
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11.7"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install huggingface_hub
 
     - name: Login to Hugging Face
       run: python -c "from huggingface_hub import login; login(token='${{ secrets.HF_API_KEY }}')"
