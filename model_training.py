@@ -20,7 +20,8 @@ wandb.init(project="trashnet-classification", entity="ziyad-azzufari")
 config = wandb.config
 config.learning_rate = 1e-4
 config.batch_size = 32
-config.epochs = 20
+config.epochs = 50        # naikkan epoch, biar early stopping yang handle
+config.patience = 5       # stop kalau 5 epoch tidak improve
 
 # Load dataset
 data_dir = "data"
@@ -77,6 +78,7 @@ model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
 model.fc = nn.Linear(model.fc.in_features, num_classes)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
 model = model.to(device)
 
 # Loss, optimizer, scheduler
@@ -91,6 +93,8 @@ scheduler = get_linear_schedule_with_warmup(
 
 # Training loop
 best_val_f1 = 0.0
+patience_counter = 0
+os.makedirs("model", exist_ok=True)
 
 for epoch in range(config.epochs):
     # Train
@@ -113,7 +117,7 @@ for epoch in range(config.epochs):
         all_labels.extend(batch_labels.cpu().numpy())
 
     train_acc = accuracy_score(all_labels, all_preds)
-    precision, recall, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='weighted')
+    _, _, train_f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='weighted')
 
     # Validation
     model.eval()
@@ -137,25 +141,30 @@ for epoch in range(config.epochs):
         "epoch": epoch + 1,
         "train_loss": train_loss / len(train_loader),
         "train_accuracy": train_acc,
-        "train_f1": f1,
+        "train_f1": train_f1,
         "val_loss": val_loss / len(val_loader),
         "val_accuracy": val_acc,
         "val_f1": val_f1,
     })
 
     print(f"Epoch {epoch+1}/{config.epochs} | "
-          f"Train Loss: {train_loss/len(train_loader):.4f} | Train Acc: {train_acc:.4f} | "
+          f"Train Loss: {train_loss/len(train_loader):.4f} | Train Acc: {train_acc:.4f} | Train F1: {train_f1:.4f} | "
           f"Val Loss: {val_loss/len(val_loader):.4f} | Val Acc: {val_acc:.4f} | Val F1: {val_f1:.4f}")
 
-    # Save best model
+    # Save best model & early stopping
     if val_f1 > best_val_f1:
         best_val_f1 = val_f1
-        os.makedirs("model", exist_ok=True)
+        patience_counter = 0
         torch.save(model.state_dict(), "model/resnet50_best.pth")
         print(f"  -> Best model saved (val_f1={val_f1:.4f})")
+    else:
+        patience_counter += 1
+        print(f"  -> No improvement ({patience_counter}/{config.patience})")
+        if patience_counter >= config.patience:
+            print(f"Early stopping triggered at epoch {epoch+1}. Best val_f1: {best_val_f1:.4f}")
+            break
 
 # Save label mappings
-os.makedirs("model", exist_ok=True)
 with open("model/label2id.json", "w") as f:
     json.dump(label2id, f)
 with open("model/id2label.json", "w") as f:
