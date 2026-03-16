@@ -25,7 +25,7 @@ jobs:
         echo '{"username":"${{ secrets.KAGGLE_USERNAME }}","key":"${{ secrets.KAGGLE_KEY }}"}' > ~/.kaggle/kaggle.json
         chmod 600 ~/.kaggle/kaggle.json
 
-    - name: Push latest code to Kaggle dataset
+    - name: Update Kaggle script dataset
       env:
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
@@ -34,36 +34,15 @@ jobs:
         cp validate_model.py kaggle_upload/
         cp requirements.txt kaggle_upload/
         echo "{\"title\": \"trashnet scripts\", \"id\": \"$KAGGLE_USERNAME/trashnet-training-script\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > kaggle_upload/dataset-metadata.json
-        if kaggle datasets list --user $KAGGLE_USERNAME | grep -q "trashnet-training-script"; then
-          echo "Dataset exists, updating version..."
-          kaggle datasets version -p kaggle_upload -m "Update from GitHub Actions"
-        else
-          echo "Dataset not found, creating..."
-          kaggle datasets create -p kaggle_upload --dir-mode zip
-        fi
+        kaggle datasets version -p kaggle_upload -m "Update scripts"
 
-    - name: Push data folder to Kaggle dataset
-      env:
-        KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
-      run: |
-        echo "{\"title\": \"trashnet data\", \"id\": \"$KAGGLE_USERNAME/trashnet-data\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > data/dataset-metadata.json
-        if kaggle datasets list --user $KAGGLE_USERNAME | grep -q "trashnet-data"; then
-          echo "Dataset exists, updating version..."
-          kaggle datasets version -p data -m "Update from GitHub Actions"
-        else
-          echo "Dataset not found, creating..."
-          kaggle datasets create -p data --dir-mode zip
-        fi
+    - name: Stop running notebook
+      run: kaggle kernels cancel ${{ secrets.KAGGLE_USERNAME }}/trashnet-training || true
 
-    - name: Wait for datasets to be processed
-      run: sleep 60
+    - name: Wait
+      run: sleep 30
 
-    - name: Stop any running Kaggle notebook
-      run: |
-        kaggle kernels cancel ${{ secrets.KAGGLE_USERNAME }}/trashnet-training || true
-        sleep 10
-
-    - name: Trigger Kaggle notebook run
+    - name: Trigger Kaggle notebook
       env:
         WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
         HF_API_KEY: ${{ secrets.HF_API_KEY }}
@@ -72,27 +51,14 @@ jobs:
         sed -i "s|HF_KEY_PLACEHOLDER|$HF_API_KEY|g" kaggle_notebook/kernel.py
         kaggle kernels push -p kaggle_notebook/
 
-    - name: Wait for Kaggle notebook to complete
+    - name: Wait for Kaggle to finish
       run: |
-        NOTEBOOK_SLUG="${{ secrets.KAGGLE_USERNAME }}/trashnet-training"
-        echo "Waiting for notebook to complete..."
+        SLUG="${{ secrets.KAGGLE_USERNAME }}/trashnet-training"
         for i in $(seq 1 120); do
-          RAW_STATUS=$(kaggle kernels status $NOTEBOOK_SLUG)
-          echo "Raw status: $RAW_STATUS"
-          if echo "$RAW_STATUS" | grep -qi "complete"; then
-            echo "Notebook completed successfully!"
-            exit 0
-          elif echo "$RAW_STATUS" | grep -qi "error"; then
-            echo "Notebook failed!"
-            exit 1
-          elif echo "$RAW_STATUS" | grep -qi "running"; then
-            echo "Still running... (attempt $i/120)"
-          elif echo "$RAW_STATUS" | grep -qi "queued"; then
-            echo "Still queued... (attempt $i/120)"
-          else
-            echo "Unknown status, continuing... (attempt $i/120)"
-          fi
+          STATUS=$(kaggle kernels status $SLUG)
+          echo "[$i/120] $STATUS"
+          echo "$STATUS" | grep -qi "complete" && exit 0
+          echo "$STATUS" | grep -qi "error" && exit 1
           sleep 60
         done
-        echo "Timeout waiting for notebook"
         exit 1
