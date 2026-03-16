@@ -32,13 +32,18 @@ jobs:
         mkdir kaggle_upload
         cp model_training.py kaggle_upload/
         cp requirements.txt kaggle_upload/
-        cd kaggle_upload
-        echo "{\"title\": \"trashnet-training-script\", \"id\": \"$KAGGLE_USERNAME/trashnet-training-script\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > dataset-metadata.json
-        kaggle datasets create -p . --dir-mode zip || kaggle datasets version -p . -m "Update from GitHub Actions"
-        
-    - name: Trigger Kaggle notebook run
+        echo "{\"title\": \"trashnet-training-script\", \"id\": \"$KAGGLE_USERNAME/trashnet-training-script\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > kaggle_upload/dataset-metadata.json
+        kaggle datasets create -p kaggle_upload --dir-mode zip || kaggle datasets version -p kaggle_upload -m "Update from GitHub Actions"
+
+    - name: Push data folder to Kaggle dataset
+      env:
+        KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
-        kaggle kernels push -p kaggle_notebook/
+        echo "{\"title\": \"trashnet-data\", \"id\": \"$KAGGLE_USERNAME/trashnet-data\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > data/dataset-metadata.json
+        kaggle datasets create -p data --dir-mode zip || kaggle datasets version -p data -m "Update from GitHub Actions"
+
+    - name: Trigger Kaggle notebook run
+      run: kaggle kernels push -p kaggle_notebook/
 
     - name: Wait for Kaggle notebook to complete
       run: |
@@ -47,7 +52,6 @@ jobs:
         for i in $(seq 1 60); do
           RAW_STATUS=$(kaggle kernels status $NOTEBOOK_SLUG)
           echo "Raw status: $RAW_STATUS"
-          
           if echo "$RAW_STATUS" | grep -qi "complete"; then
             echo "Notebook completed successfully!"
             exit 0
@@ -61,7 +65,6 @@ jobs:
           else
             echo "Unknown status, continuing... (attempt $i/60)"
           fi
-          
           sleep 60
         done
         echo "Timeout waiting for notebook"
