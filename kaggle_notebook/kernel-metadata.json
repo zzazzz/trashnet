@@ -1,0 +1,14 @@
+{
+  "id": "YOUR_KAGGLE_USERNAME/trashnet-training",
+  "title": "Trashnet Training",
+  "code_file": "kernel.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": ["ziyadmuhammad/trashnet-training-script"],
+  "competition_sources": [],
+  "kernel_sources": []
+}
