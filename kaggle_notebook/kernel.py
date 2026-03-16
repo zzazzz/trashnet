@@ -7,14 +7,12 @@ subprocess.run(["pip", "install", "-q", "wandb", "huggingface_hub",
 import wandb
 from huggingface_hub import login
 
-wandb.login(key=os.environ.get("WANDB_API_KEY"))
-login(token=os.environ.get("HF_API_KEY"))
+wandb.login(key="WANDB_KEY_PLACEHOLDER")
+login(token="HF_KEY_PLACEHOLDER")
 
 import shutil
 shutil.copy("/kaggle/input/datasets/ziyadmuhammad/trashnet-training-script/model_training.py", "model_training.py")
 shutil.copy("/kaggle/input/datasets/ziyadmuhammad/trashnet-training-script/requirements.txt", "requirements.txt")
-
-# Copy data folder
 shutil.copytree("/kaggle/input/datasets/ziyadmuhammad/trashnet-data", "data")
 
 exec(open("model_training.py").read())
