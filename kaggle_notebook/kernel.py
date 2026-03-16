@@ -11,8 +11,8 @@ wandb.login(key="WANDB_KEY_PLACEHOLDER")
 login(token="HF_KEY_PLACEHOLDER")
 
 import shutil
-shutil.copy("/kaggle/input/datasets/ziyadmuhammad/trashnet-training-script/model_training.py", "model_training.py")
-shutil.copy("/kaggle/input/datasets/ziyadmuhammad/trashnet-training-script/requirements.txt", "requirements.txt")
+shutil.copy("/kaggle/input/trashnet-training-script/model_training.py", "model_training.py")
+shutil.copy("/kaggle/input/trashnet-training-script/requirements.txt", "requirements.txt")
 shutil.copytree("/kaggle/input/trashnet-data", "data")
 
 exec(open("model_training.py").read())
