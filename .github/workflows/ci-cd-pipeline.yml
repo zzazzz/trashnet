@@ -52,15 +52,15 @@ jobs:
           RAW_STATUS=$(kaggle kernels status $NOTEBOOK_SLUG)
           echo "Raw status: $RAW_STATUS"
           
-          if echo "$RAW_STATUS" | grep -q "complete"; then
+          if echo "$RAW_STATUS" | grep -qi "complete"; then
             echo "Notebook completed successfully!"
             exit 0
-          elif echo "$RAW_STATUS" | grep -q "error"; then
+          elif echo "$RAW_STATUS" | grep -qi "error"; then
             echo "Notebook failed!"
             exit 1
-          elif echo "$RAW_STATUS" | grep -q "running"; then
+          elif echo "$RAW_STATUS" | grep -qi "running"; then
             echo "Still running... (attempt $i/60)"
-          elif echo "$RAW_STATUS" | grep -q "queued"; then
+          elif echo "$RAW_STATUS" | grep -qi "queued"; then
             echo "Still queued... (attempt $i/60)"
           else
             echo "Unknown status, continuing... (attempt $i/60)"
