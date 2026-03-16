@@ -33,18 +33,35 @@ jobs:
         cp model_training.py kaggle_upload/
         cp validate_model.py kaggle_upload/
         cp requirements.txt kaggle_upload/
-        echo "{\"title\": \"trashnet scripts\", \"id\": \"$KAGGLE_USERNAME/trashnet-training-script_1\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > kaggle_upload/dataset-metadata.json
-        kaggle datasets create -p kaggle_upload --dir-mode zip || kaggle datasets version -p kaggle_upload -m "Update from GitHub Actions"
+        echo "{\"title\": \"trashnet scripts\", \"id\": \"$KAGGLE_USERNAME/trashnet-training-script\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > kaggle_upload/dataset-metadata.json
+        if kaggle datasets list --user $KAGGLE_USERNAME | grep -q "trashnet-training-script"; then
+          echo "Dataset exists, updating version..."
+          kaggle datasets version -p kaggle_upload -m "Update from GitHub Actions"
+        else
+          echo "Dataset not found, creating..."
+          kaggle datasets create -p kaggle_upload --dir-mode zip
+        fi
 
     - name: Push data folder to Kaggle dataset
       env:
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
-        echo "{\"title\": \"trashnet data\", \"id\": \"$KAGGLE_USERNAME/trashnet-data_1\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > data/dataset-metadata.json
-        kaggle datasets create -p data --dir-mode zip || kaggle datasets version -p data -m "Update from GitHub Actions"
+        echo "{\"title\": \"trashnet data\", \"id\": \"$KAGGLE_USERNAME/trashnet-data\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > data/dataset-metadata.json
+        if kaggle datasets list --user $KAGGLE_USERNAME | grep -q "trashnet-data"; then
+          echo "Dataset exists, updating version..."
+          kaggle datasets version -p data -m "Update from GitHub Actions"
+        else
+          echo "Dataset not found, creating..."
+          kaggle datasets create -p data --dir-mode zip
+        fi
 
     - name: Wait for datasets to be processed
       run: sleep 60
+
+    - name: Stop any running Kaggle notebook
+      run: |
+        kaggle kernels cancel ${{ secrets.KAGGLE_USERNAME }}/trashnet-training || true
+        sleep 10
 
     - name: Trigger Kaggle notebook run
       env:
@@ -57,7 +74,7 @@ jobs:
 
     - name: Wait for Kaggle notebook to complete
       run: |
-        NOTEBOOK_SLUG="${{ secrets.KAGGLE_USERNAME }}/trashnet-training_1"
+        NOTEBOOK_SLUG="${{ secrets.KAGGLE_USERNAME }}/trashnet-training"
         echo "Waiting for notebook to complete..."
         for i in $(seq 1 120); do
           RAW_STATUS=$(kaggle kernels status $NOTEBOOK_SLUG)
