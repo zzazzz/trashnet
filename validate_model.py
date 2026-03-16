@@ -6,18 +6,16 @@ import numpy as np
 from torchvision import transforms, models
 from torch.utils.data import DataLoader, Dataset
 from sklearn.metrics import confusion_matrix, classification_report
-from huggingface_hub import hf_hub_download, snapshot_download
+from huggingface_hub import snapshot_download
 from PIL import Image
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# Download model dari HuggingFace Hub
-repo_id = "ziyadazz/trashnet-resnet50"
-print(f"Downloading model from {repo_id}...")
-snapshot_download(repo_id=repo_id, local_dir="model")
+print("Loading model from Hugging Face Hub...")
+snapshot_download(repo_id="ziyadazz/trashnet-resnet50", local_dir="model_hf")
 
 # Load label mappings
-with open("model/id2label.json", "r") as f:
+with open("model_hf/id2label.json", "r") as f:
     id2label = {int(k): v for k, v in json.load(f).items()}
 
 num_classes = len(id2label)
@@ -25,10 +23,11 @@ class_names = [id2label[i] for i in range(num_classes)]
 
 # Load ResNet50 model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
 
 model = models.resnet50(weights=None)
 model.fc = nn.Linear(model.fc.in_features, num_classes)
-model.load_state_dict(torch.load("model/resnet50_best.pth", map_location=device))
+model.load_state_dict(torch.load("model_hf/resnet50_best.pth", map_location=device))
 model = model.to(device)
 model.eval()
 
@@ -40,7 +39,7 @@ val_transforms = transforms.Compose([
                          std=[0.229, 0.224, 0.225])
 ])
 
-# Custom Dataset untuk test
+# Custom Dataset
 class TestDataset(Dataset):
     def __init__(self, test_dir, id2label, transform=None):
         self.samples = []
@@ -90,15 +89,12 @@ print(report)
 # Confusion Matrix
 cm = confusion_matrix(true_labels, pred_labels)
 
-def plot_confusion_matrix(cm, classes):
-    plt.figure(figsize=(10, 7))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
-                xticklabels=classes, yticklabels=classes)
-    plt.xlabel('Predicted')
-    plt.ylabel('True')
-    plt.title('Confusion Matrix - ResNet50')
-    plt.tight_layout()
-    plt.savefig("confusion_matrix.png")
-    print("Confusion matrix saved to confusion_matrix.png")
-
-plot_confusion_matrix(cm, class_names)
+plt.figure(figsize=(10, 7))
+sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
+            xticklabels=class_names, yticklabels=class_names)
+plt.xlabel('Predicted')
+plt.ylabel('True')
+plt.title('Confusion Matrix - ResNet50')
+plt.tight_layout()
+plt.savefig("confusion_matrix.png")
+print("Confusion matrix saved to confusion_matrix.png")
