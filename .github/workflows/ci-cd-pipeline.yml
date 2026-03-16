@@ -26,20 +26,16 @@ jobs:
         chmod 600 ~/.kaggle/kaggle.json
 
     - name: Push latest code to Kaggle dataset
+      env:
+        KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
         mkdir kaggle_upload
         cp model_training.py kaggle_upload/
         cp requirements.txt kaggle_upload/
         cd kaggle_upload
-        cat > dataset-metadata.json << EOF
-        {
-          "title": "trashnet-training-script",
-          "id": "${{ secrets.KAGGLE_USERNAME }}/trashnet-training-script",
-          "licenses": [{"name": "CC0-1.0"}]
-        }
-        EOF
+        echo "{\"title\": \"trashnet-training-script\", \"id\": \"$KAGGLE_USERNAME/trashnet-training-script\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > dataset-metadata.json
         kaggle datasets create -p . --dir-mode zip || kaggle datasets version -p . -m "Update from GitHub Actions"
-
+        
     - name: Trigger Kaggle notebook run
       run: |
         kaggle kernels push -p kaggle_notebook/
