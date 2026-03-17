@@ -1,17 +1,15 @@
 import os
 import subprocess
+import wandb
+from huggingface_hub import login
+import shutil
 
 subprocess.run(["pip", "install", "-q", "wandb", "huggingface_hub",
                 "datasets", "transformers", "torchvision",
                 "scikit-learn", "seaborn", "matplotlib"], check=True)
 
-import wandb
-from huggingface_hub import login
-
 wandb.login(key="WANDB_KEY_PLACEHOLDER")
 login(token="HF_KEY_PLACEHOLDER")
-
-import shutil
 
 print("Input directory:", os.listdir("/kaggle/input/"))
 print("trashnet-data contents:", os.listdir("/kaggle/input/trashnet-data/"))
