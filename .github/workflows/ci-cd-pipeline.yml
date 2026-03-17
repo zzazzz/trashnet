@@ -30,8 +30,10 @@ jobs:
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
         mkdir kaggle_upload
-        cp model_training.py kaggle_upload/
-        cp validate_model.py kaggle_upload/
+        cp model_training_resnet.py kaggle_upload/
+        cp model_training_swin.py kaggle_upload/
+        cp validate_model_resnet.py kaggle_upload/
+        cp validate_model_swin.py kaggle_upload/
         cp requirements.txt kaggle_upload/
         echo "{\"title\": \"trashnet-training-script\", \"id\": \"$KAGGLE_USERNAME/trashnet-training-script\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > kaggle_upload/dataset-metadata.json
         kaggle datasets create -p kaggle_upload --dir-mode zip || kaggle datasets version -p kaggle_upload -m "Update from GitHub Actions"
@@ -77,8 +79,34 @@ jobs:
         kaggle kernels output ${{ secrets.KAGGLE_USERNAME }}/trashnet-training -p kaggle_output/
         ls kaggle_output/
 
-    - name: Upload confusion matrix as artifact
+    - name: Copy results to results folder
+      run: |
+        mkdir -p results
+        cp kaggle_output/confusion_matrix_resnet.png results/
+        cp kaggle_output/confusion_matrix_swin.png results/
+        cp kaggle_output/sample_per_class_resnet.png results/
+        cp kaggle_output/sample_per_class_swin.png results/
+        cp kaggle_output/prediction_results_resnet.png results/
+        cp kaggle_output/prediction_results_swin.png results/
+        cp kaggle_output/accuracy_per_class_resnet.png results/
+        cp kaggle_output/accuracy_per_class_swin.png results/
+
+    - name: Generate README
+      run: python generate_readme.py
+
+    - name: Commit and push results to GitHub
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add results/
+        git add README.md
+        git diff --staged --quiet || git commit -m "chore: update results and README from training run [skip ci]"
+        git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: confusion-matrix
-        path: kaggle_output/confusion_matrix.png
+        name: training-results
+        path: results/

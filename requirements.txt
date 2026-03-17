@@ -1,11 +1,10 @@
 torch
+torchvision
 transformers
 datasets
 wandb
+huggingface_hub
 scikit-learn
 seaborn
-Pillow
-torchvision
 matplotlib
-scipy
-huggingface_hub
+Pillow
