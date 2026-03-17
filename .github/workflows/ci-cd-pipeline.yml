@@ -48,11 +48,9 @@ jobs:
     - name: Trigger Kaggle notebook run
       env:
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
-        WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
-        HF_API_KEY: ${{ secrets.HF_API_KEY }}
       run: |
-        sed -i "s|WANDB_KEY_PLACEHOLDER|$WANDB_API_KEY|g" kaggle_notebook/kernel.py
-        sed -i "s|HF_KEY_PLACEHOLDER|$HF_API_KEY|g" kaggle_notebook/kernel.py
+        echo "=== kernel-metadata.json ==="
+        cat kaggle_notebook/kernel-metadata.json
         kaggle kernels push -p kaggle_notebook/
 
     - name: Wait for Kaggle notebook to complete
