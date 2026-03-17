@@ -25,7 +25,7 @@ jobs:
         echo '{"username":"${{ secrets.KAGGLE_USERNAME }}","key":"${{ secrets.KAGGLE_KEY }}"}' > ~/.kaggle/kaggle.json
         chmod 600 ~/.kaggle/kaggle.json
 
-    - name: Update Kaggle script dataset
+    - name: Push latest code to Kaggle dataset
       env:
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
@@ -33,17 +33,19 @@ jobs:
         cp model_training.py kaggle_upload/
         cp validate_model.py kaggle_upload/
         cp requirements.txt kaggle_upload/
-        echo "{\"title\": \"trashnet scripts\", \"id\": \"$KAGGLE_USERNAME/trashnet-training-script\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > kaggle_upload/dataset-metadata.json
-        kaggle datasets version -p kaggle_upload -m "Update scripts"
+        echo "{\"title\": \"trashnet-training-script\", \"id\": \"$KAGGLE_USERNAME/trashnet-training-script\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > kaggle_upload/dataset-metadata.json
+        kaggle datasets create -p kaggle_upload --dir-mode zip || kaggle datasets version -p kaggle_upload -m "Update from GitHub Actions"
 
-    - name: Stop running notebook
-      run: kaggle kernels cancel ${{ secrets.KAGGLE_USERNAME }}/trashnet-training || true
-
-    - name: Wait
-      run: sleep 30
-
-    - name: Trigger Kaggle notebook
+    - name: Push data folder to Kaggle dataset
       env:
+        KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+      run: |
+        echo "{\"title\": \"trashnet-data\", \"id\": \"$KAGGLE_USERNAME/trashnet-data\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > data/dataset-metadata.json
+        kaggle datasets create -p data --dir-mode zip || kaggle datasets version -p data -m "Update from GitHub Actions"
+
+    - name: Trigger Kaggle notebook run
+      env:
+        KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
         WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
         HF_API_KEY: ${{ secrets.HF_API_KEY }}
       run: |
@@ -51,14 +53,32 @@ jobs:
         sed -i "s|HF_KEY_PLACEHOLDER|$HF_API_KEY|g" kaggle_notebook/kernel.py
         kaggle kernels push -p kaggle_notebook/
 
-    - name: Wait for Kaggle to finish
+    - name: Wait for Kaggle notebook to complete
       run: |
-        SLUG="${{ secrets.KAGGLE_USERNAME }}/trashnet-training"
+        NOTEBOOK_SLUG="${{ secrets.KAGGLE_USERNAME }}/trashnet-training"
+        echo "Waiting for notebook to complete..."
         for i in $(seq 1 120); do
-          STATUS=$(kaggle kernels status $SLUG)
-          echo "[$i/120] $STATUS"
-          echo "$STATUS" | grep -qi "complete" && exit 0
-          echo "$STATUS" | grep -qi "error" && exit 1
+          RAW_STATUS=$(kaggle kernels status $NOTEBOOK_SLUG)
+          echo "Raw status: $RAW_STATUS"
+          if echo "$RAW_STATUS" | grep -qi "complete"; then
+            echo "Notebook completed successfully!"
+            exit 0
+          elif echo "$RAW_STATUS" | grep -qi "error"; then
+            echo "Notebook failed!"
+            exit 1
+          fi
           sleep 60
         done
+        echo "Timeout waiting for notebook"
         exit 1
+
+    - name: Download validation output from Kaggle
+      run: |
+        kaggle kernels output ${{ secrets.KAGGLE_USERNAME }}/trashnet-training -p kaggle_output/
+        ls kaggle_output/
+
+    - name: Upload confusion matrix as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: confusion-matrix
+        path: kaggle_output/confusion_matrix.png
