@@ -9,8 +9,8 @@
   "enable_tpu": false,
   "enable_internet": true,
   "dataset_sources": [
-    "ziyadmuhammad/trashnet-training-script_1",
-    "ziyadmuhammad/trashnet-data_1"
+    "ziyadmuhammad/trashnet-training-script",
+    "ziyadmuhammad/trashnet-data"
   ],
   "competition_sources": [],
   "kernel_sources": []
