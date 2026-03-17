@@ -25,7 +25,7 @@ jobs:
         python-version: "3.11.7"
 
     - name: Install Kaggle CLI
-      run: pip install kaggle
+      run: pip install --upgrade kaggle
 
     - name: Setup Kaggle credentials
       run: |
@@ -33,14 +33,15 @@ jobs:
         echo '{"username":"${{ secrets.KAGGLE_USERNAME }}","key":"${{ secrets.KAGGLE_KEY }}"}' > ~/.kaggle/kaggle.json
         chmod 600 ~/.kaggle/kaggle.json
 
-    # =========================
-    # Upload training scripts
-    # =========================
+    # =================================
+    # Upload training scripts dataset
+    # =================================
 
     - name: Upload training scripts dataset
       env:
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
+        rm -rf kaggle_upload
         mkdir kaggle_upload
 
         cp model_training_resnet.py kaggle_upload/
@@ -54,9 +55,9 @@ jobs:
         kaggle datasets create -p kaggle_upload --dir-mode zip || \
         kaggle datasets version -p kaggle_upload -m "Update scripts from GitHub Actions"
 
-    # =========================
-    # Upload dataset images
-    # =========================
+    # =================================
+    # Upload image dataset
+    # =================================
 
     - name: Upload image dataset
       env:
@@ -67,31 +68,61 @@ jobs:
         kaggle datasets create -p data --dir-mode zip || \
         kaggle datasets version -p data -m "Update dataset from GitHub Actions"
 
-    - name: Trigger Kaggle notebook run
+    # =================================
+    # WAIT DATASET READY (FIX RACE CONDITION)
+    # =================================
+
+    - name: Wait until dataset is ready
       env:
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+      run: |
+        DATASET="$KAGGLE_USERNAME/trashnet-data"
+
+        echo "Waiting for dataset $DATASET to be ready..."
+
+        for i in $(seq 1 30); do
+          if kaggle datasets files $DATASET; then
+            echo "Dataset ready!"
+            break
+          fi
+
+          echo "Dataset not ready yet... retrying in 10 seconds"
+          sleep 10
+        done
+
+    # =================================
+    # WAIT KAGGLE PROPAGATION
+    # =================================
+
+    - name: Wait Kaggle propagation
+      run: |
+        echo "Waiting Kaggle to propagate dataset mount..."
+        sleep 60
+
+    # =================================
+    # Inject API keys and trigger notebook
+    # =================================
+
+    - name: Trigger Kaggle notebook run
+      env:
         WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
         HF_API_KEY: ${{ secrets.HF_API_KEY }}
       run: |
-        sed -i "s|WANDB_KEY_PLACEHOLDER|$WANDB_API_KEY|g" kaggle_notebook/kernel.py
-        sed -i "s|HF_KEY_PLACEHOLDER|$HF_API_KEY|g" kaggle_notebook/kernel.py
-        kaggle kernels push -p kaggle_notebook/
+        sed -i "s|WANDB_KEY_PLACEHOLDER|${WANDB_API_KEY}|g" kaggle_notebook/kernel.py
+        sed -i "s|HF_KEY_PLACEHOLDER|${HF_API_KEY}|g" kaggle_notebook/kernel.py
 
-    # =========================
-    # Push kernel ke Kaggle
-    # =========================
-
-    - name: Push Kaggle kernel
-      run: |
         kaggle kernels push -p kaggle_notebook
 
-    # =========================
-    # Tunggu training selesai
-    # =========================
+    # =================================
+    # WAIT TRAINING
+    # =================================
 
     - name: Wait for Kaggle notebook
+      env:
+        KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
-        NOTEBOOK_SLUG="${{ secrets.KAGGLE_USERNAME }}/trashnet-training"
+
+        NOTEBOOK_SLUG="$KAGGLE_USERNAME/trashnet-training"
 
         echo "Waiting for notebook..."
 
@@ -115,18 +146,20 @@ jobs:
         echo "Timeout waiting for Kaggle run"
         exit 1
 
-    # =========================
-    # Download output
-    # =========================
+    # =================================
+    # DOWNLOAD OUTPUT
+    # =================================
 
     - name: Download Kaggle output
+      env:
+        KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
-        kaggle kernels output ${{ secrets.KAGGLE_USERNAME }}/trashnet-training -p kaggle_output
+        kaggle kernels output $KAGGLE_USERNAME/trashnet-training -p kaggle_output
         ls kaggle_output
 
-    # =========================
-    # Copy results
-    # =========================
+    # =================================
+    # COLLECT RESULTS
+    # =================================
 
     - name: Collect results
       run: |
@@ -141,16 +174,16 @@ jobs:
         cp kaggle_output/accuracy_per_class_resnet.png results/ || true
         cp kaggle_output/accuracy_per_class_swin.png results/ || true
 
-    # =========================
-    # Generate README
-    # =========================
+    # =================================
+    # GENERATE README
+    # =================================
 
     - name: Generate README
       run: python generate_readme.py
 
-    # =========================
-    # Commit results
-    # =========================
+    # =================================
+    # COMMIT RESULTS
+    # =================================
 
     - name: Commit results
       run: |
@@ -166,9 +199,9 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    # =========================
-    # Upload artifact
-    # =========================
+    # =================================
+    # UPLOAD ARTIFACT
+    # =================================
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4

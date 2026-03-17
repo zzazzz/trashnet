@@ -4,7 +4,7 @@ import wandb
 from huggingface_hub import login
 import shutil
 
-DATASET_PATH = "/kaggle/input/datasets/ziyadmuhammad/trashnet-data"
+DATASET_PATH = "/kaggle/input/trashnet-data"
 SCRIPT_PATH = "/kaggle/input/trashnet-training-script"
 
 print("Dataset path:", DATASET_PATH)
