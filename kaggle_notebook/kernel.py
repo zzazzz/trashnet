@@ -2,7 +2,8 @@ import os
 import subprocess
 
 subprocess.run(["pip", "install", "-q", "wandb", "huggingface_hub", 
-                "datasets", "transformers", "torchvision"], check=True)
+                "datasets", "transformers", "torchvision",
+                "scikit-learn", "seaborn", "matplotlib"], check=True)
 
 import wandb
 from huggingface_hub import login
@@ -19,5 +20,5 @@ shutil.copytree("/kaggle/input/trashnet-data", "data")
 # Jalankan training
 exec(open("model_training.py").read())
 
-# Jalankan validasi setelah training
+# Jalankan validasi setelah training — hasilnya ke /kaggle/working/
 exec(open("validate_model.py").read())
