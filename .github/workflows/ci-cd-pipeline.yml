@@ -14,6 +14,11 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Debug repo structure
+      run: |
+        echo "Repository structure:"
+        ls -R
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -50,7 +55,7 @@ jobs:
         kaggle datasets version -p kaggle_upload -m "Update scripts from GitHub Actions"
 
     # =========================
-    # Upload dataset
+    # Upload dataset images
     # =========================
 
     - name: Upload image dataset
@@ -60,21 +65,10 @@ jobs:
         echo "{\"title\": \"trashnet-data\", \"id\": \"$KAGGLE_USERNAME/trashnet-data\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > data/dataset-metadata.json
 
         kaggle datasets create -p data --dir-mode zip || \
-        kaggle datasets version -p data -m "Update data from GitHub Actions"
+        kaggle datasets version -p data -m "Update dataset from GitHub Actions"
 
     # =========================
-    # Prepare Kaggle notebook
-    # =========================
-
-    - name: Prepare Kaggle kernel
-      run: |
-        mkdir -p kaggle_notebook
-
-        cp kernel.py kaggle_notebook/
-        cp kernel-metadata.json kaggle_notebook/
-
-    # =========================
-    # Trigger Kaggle training
+    # Push kernel ke Kaggle
     # =========================
 
     - name: Push Kaggle kernel
@@ -82,14 +76,14 @@ jobs:
         kaggle kernels push -p kaggle_notebook
 
     # =========================
-    # Wait for training
+    # Tunggu training selesai
     # =========================
 
-    - name: Wait for Kaggle notebook to complete
+    - name: Wait for Kaggle notebook
       run: |
         NOTEBOOK_SLUG="${{ secrets.KAGGLE_USERNAME }}/trashnet-training"
 
-        echo "Waiting for notebook to complete..."
+        echo "Waiting for notebook..."
 
         for i in $(seq 1 120); do
 
@@ -98,17 +92,17 @@ jobs:
           echo "Raw status: $RAW_STATUS"
 
           if echo "$RAW_STATUS" | grep -qi "complete"; then
-            echo "Notebook completed successfully!"
+            echo "Training finished!"
             exit 0
           elif echo "$RAW_STATUS" | grep -qi "error"; then
-            echo "Notebook failed!"
+            echo "Training failed!"
             exit 1
           fi
 
           sleep 60
         done
 
-        echo "Timeout waiting for notebook"
+        echo "Timeout waiting for Kaggle run"
         exit 1
 
     # =========================
@@ -117,27 +111,23 @@ jobs:
 
     - name: Download Kaggle output
       run: |
-        kaggle kernels output ${{ secrets.KAGGLE_USERNAME }}/trashnet-training -p kaggle_output/
-
-        ls kaggle_output/
+        kaggle kernels output ${{ secrets.KAGGLE_USERNAME }}/trashnet-training -p kaggle_output
+        ls kaggle_output
 
     # =========================
-    # Collect results
+    # Copy results
     # =========================
 
-    - name: Copy results
+    - name: Collect results
       run: |
         mkdir -p results
 
         cp kaggle_output/confusion_matrix_resnet.png results/ || true
         cp kaggle_output/confusion_matrix_swin.png results/ || true
-
         cp kaggle_output/sample_per_class_resnet.png results/ || true
         cp kaggle_output/sample_per_class_swin.png results/ || true
-
         cp kaggle_output/prediction_results_resnet.png results/ || true
         cp kaggle_output/prediction_results_swin.png results/ || true
-
         cp kaggle_output/accuracy_per_class_resnet.png results/ || true
         cp kaggle_output/accuracy_per_class_swin.png results/ || true
 
@@ -152,7 +142,7 @@ jobs:
     # Commit results
     # =========================
 
-    - name: Commit and push results
+    - name: Commit results
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -160,7 +150,7 @@ jobs:
         git add results/
         git add README.md
 
-        git diff --staged --quiet || git commit -m "chore: update results and README from training run [skip ci]"
+        git diff --staged --quiet || git commit -m "Update results from Kaggle training [skip ci]"
 
         git push
       env:

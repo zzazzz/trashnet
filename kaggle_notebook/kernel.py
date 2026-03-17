@@ -4,14 +4,12 @@ import wandb
 from huggingface_hub import login
 import shutil
 
-# Path dataset Kaggle (BENAR)
 DATASET_PATH = "/kaggle/input/trashnet-data"
 SCRIPT_PATH = "/kaggle/input/trashnet-training-script"
 
 print("Dataset path:", DATASET_PATH)
 print("Script path:", SCRIPT_PATH)
 
-# Install dependencies
 subprocess.run([
     "pip","install","-q",
     "wandb",
@@ -24,11 +22,9 @@ subprocess.run([
     "matplotlib"
 ], check=True)
 
-# Login menggunakan environment variable (AMAN)
 wandb.login(key=os.environ["WANDB_API_KEY"])
 login(token=os.environ["HF_API_KEY"])
 
-# Copy scripts dari dataset ke working directory
 scripts = [
     "model_training_resnet.py",
     "model_training_swin.py",
@@ -43,28 +39,18 @@ for s in scripts:
         shutil.copy(src, s)
         print(f"Copied {s}")
     else:
-        raise FileNotFoundError(f"{src} not found")
+        raise FileNotFoundError(src)
 
-print("\nAll scripts copied successfully\n")
-
-# =========================
-# TRAINING
-# =========================
-
-print("\n========== TRAINING RESNET50 ==========")
+print("\nTraining ResNet50")
 exec(open("model_training_resnet.py").read())
 
-print("\n========== TRAINING SWIN TRANSFORMER ==========")
+print("\nTraining Swin Transformer")
 exec(open("model_training_swin.py").read())
 
-# =========================
-# VALIDATION
-# =========================
-
-print("\n========== VALIDASI RESNET50 ==========")
+print("\nValidasi ResNet")
 exec(open("validate_model_resnet.py").read())
 
-print("\n========== VALIDASI SWIN ==========")
+print("\nValidasi Swin")
 exec(open("validate_model_swin.py").read())
 
-print("\nTraining pipeline completed.")
+print("Training pipeline completed.")
