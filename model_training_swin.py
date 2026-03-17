@@ -24,7 +24,15 @@ config.epochs = 50
 config.patience = 5
 
 data_dir = "/kaggle/input/datasets/ziyadmuhammad/trashnet-data"
-ds = load_dataset("imagefolder", data_dir=data_dir)
+ds = load_dataset(
+    "imagefolder",
+    data_dir=data_dir,
+    data_files={
+        "train": "train/**",
+        "validation": "val/**",
+        "test": "test/**"
+    }
+)
 
 labels = ds["train"].features["label"].names
 label2id = {label: i for i, label in enumerate(labels)}
