@@ -16,7 +16,7 @@ shutil.copy("/kaggle/input/datasets/ziyadmuhammad/trashnet-training-script/model
 shutil.copy("/kaggle/input/datasets/ziyadmuhammad/trashnet-training-script/validate_model_resnet.py", "validate_model_resnet.py")
 shutil.copy("/kaggle/input/datasets/ziyadmuhammad/trashnet-training-script/validate_model_swin.py", "validate_model_swin.py")
 shutil.copy("/kaggle/input/datasets/ziyadmuhammad/trashnet-training-script/requirements.txt", "requirements.txt")
-shutil.copytree("/kaggle/input/datasets/ziyadmuhammad/trashnet-data/data", "data")
+shutil.copytree("/kaggle/input/datasets/ziyadmuhammad/trashnet-data/")
 
 # Training ResNet50
 print("\n========== TRAINING RESNET50 ==========")
