@@ -1,4 +1,5 @@
 name: Model Training and Evaluation Pipeline
+
 on:
   push:
     branches:
@@ -7,7 +8,9 @@ on:
 jobs:
   trigger_kaggle_training:
     runs-on: ubuntu-latest
+
     steps:
+
     - name: Checkout repository
       uses: actions/checkout@v4
 
@@ -25,43 +28,75 @@ jobs:
         echo '{"username":"${{ secrets.KAGGLE_USERNAME }}","key":"${{ secrets.KAGGLE_KEY }}"}' > ~/.kaggle/kaggle.json
         chmod 600 ~/.kaggle/kaggle.json
 
-    - name: Push latest code to Kaggle dataset
+    # =========================
+    # Upload training scripts
+    # =========================
+
+    - name: Upload training scripts dataset
       env:
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
         mkdir kaggle_upload
+
         cp model_training_resnet.py kaggle_upload/
         cp model_training_swin.py kaggle_upload/
         cp validate_model_resnet.py kaggle_upload/
         cp validate_model_swin.py kaggle_upload/
         cp requirements.txt kaggle_upload/
-        echo "{\"title\": \"trashnet-training-script\", \"id\": \"$KAGGLE_USERNAME/trashnet-training-script\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > kaggle_upload/dataset-metadata.json
-        kaggle datasets create -p kaggle_upload --dir-mode zip || kaggle datasets version -p kaggle_upload -m "Update from GitHub Actions"
 
-    - name: Push data folder to Kaggle dataset
+        echo "{\"title\": \"trashnet-training-script\", \"id\": \"$KAGGLE_USERNAME/trashnet-training-script\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > kaggle_upload/dataset-metadata.json
+
+        kaggle datasets create -p kaggle_upload --dir-mode zip || \
+        kaggle datasets version -p kaggle_upload -m "Update scripts from GitHub Actions"
+
+    # =========================
+    # Upload dataset
+    # =========================
+
+    - name: Upload image dataset
       env:
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
         echo "{\"title\": \"trashnet-data\", \"id\": \"$KAGGLE_USERNAME/trashnet-data\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > data/dataset-metadata.json
-        kaggle datasets create -p data --dir-mode zip || kaggle datasets version -p data -m "Update from GitHub Actions"
 
-    - name: Trigger Kaggle notebook run
-      env:
-        KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
-        WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
-        HF_API_KEY: ${{ secrets.HF_API_KEY }}
+        kaggle datasets create -p data --dir-mode zip || \
+        kaggle datasets version -p data -m "Update data from GitHub Actions"
+
+    # =========================
+    # Prepare Kaggle notebook
+    # =========================
+
+    - name: Prepare Kaggle kernel
       run: |
-        sed -i "s|WANDB_KEY_PLACEHOLDER|$WANDB_API_KEY|g" kaggle_notebook/kernel.py
-        sed -i "s|HF_KEY_PLACEHOLDER|$HF_API_KEY|g" kaggle_notebook/kernel.py
-        kaggle kernels push -p kaggle_notebook/
+        mkdir -p kaggle_notebook
+
+        cp kernel.py kaggle_notebook/
+        cp kernel-metadata.json kaggle_notebook/
+
+    # =========================
+    # Trigger Kaggle training
+    # =========================
+
+    - name: Push Kaggle kernel
+      run: |
+        kaggle kernels push -p kaggle_notebook
+
+    # =========================
+    # Wait for training
+    # =========================
 
     - name: Wait for Kaggle notebook to complete
       run: |
         NOTEBOOK_SLUG="${{ secrets.KAGGLE_USERNAME }}/trashnet-training"
+
         echo "Waiting for notebook to complete..."
+
         for i in $(seq 1 120); do
+
           RAW_STATUS=$(kaggle kernels status $NOTEBOOK_SLUG)
+
           echo "Raw status: $RAW_STATUS"
+
           if echo "$RAW_STATUS" | grep -qi "complete"; then
             echo "Notebook completed successfully!"
             exit 0
@@ -69,41 +104,71 @@ jobs:
             echo "Notebook failed!"
             exit 1
           fi
+
           sleep 60
         done
+
         echo "Timeout waiting for notebook"
         exit 1
 
-    - name: Download validation output from Kaggle
+    # =========================
+    # Download output
+    # =========================
+
+    - name: Download Kaggle output
       run: |
         kaggle kernels output ${{ secrets.KAGGLE_USERNAME }}/trashnet-training -p kaggle_output/
+
         ls kaggle_output/
 
-    - name: Copy results to results folder
+    # =========================
+    # Collect results
+    # =========================
+
+    - name: Copy results
       run: |
         mkdir -p results
-        cp kaggle_output/confusion_matrix_resnet.png results/
-        cp kaggle_output/confusion_matrix_swin.png results/
-        cp kaggle_output/sample_per_class_resnet.png results/
-        cp kaggle_output/sample_per_class_swin.png results/
-        cp kaggle_output/prediction_results_resnet.png results/
-        cp kaggle_output/prediction_results_swin.png results/
-        cp kaggle_output/accuracy_per_class_resnet.png results/
-        cp kaggle_output/accuracy_per_class_swin.png results/
+
+        cp kaggle_output/confusion_matrix_resnet.png results/ || true
+        cp kaggle_output/confusion_matrix_swin.png results/ || true
+
+        cp kaggle_output/sample_per_class_resnet.png results/ || true
+        cp kaggle_output/sample_per_class_swin.png results/ || true
+
+        cp kaggle_output/prediction_results_resnet.png results/ || true
+        cp kaggle_output/prediction_results_swin.png results/ || true
+
+        cp kaggle_output/accuracy_per_class_resnet.png results/ || true
+        cp kaggle_output/accuracy_per_class_swin.png results/ || true
+
+    # =========================
+    # Generate README
+    # =========================
 
     - name: Generate README
       run: python generate_readme.py
 
-    - name: Commit and push results to GitHub
+    # =========================
+    # Commit results
+    # =========================
+
+    - name: Commit and push results
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
+
         git add results/
         git add README.md
+
         git diff --staged --quiet || git commit -m "chore: update results and README from training run [skip ci]"
+
         git push
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # =========================
+    # Upload artifact
+    # =========================
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
