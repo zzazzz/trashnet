@@ -48,11 +48,11 @@ for s in scripts:
     else:
         raise FileNotFoundError(src)
 
-print("\nTraining ResNet50")
-exec(open("model_training_resnet.py").read())
-
 print("\nTraining Swin Transformer")
 exec(open("model_training_swin.py").read())
+
+print("\nTraining ResNet50")
+exec(open("model_training_resnet.py").read())
 
 print("\nValidasi ResNet")
 exec(open("validate_model_resnet.py").read())
