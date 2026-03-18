@@ -1,12 +1,11 @@
 import os
-import glob
 import subprocess
 import wandb
 from huggingface_hub import login
 import shutil
 
-DATASET_PATH = "/kaggle/input/trashnet-data"
-SCRIPT_PATH = "/kaggle/input/trashnet-training-script"
+DATASET_PATH = "/kaggle/input/datasets/ziyadmuhammad/trashnet-data"
+SCRIPT_PATH = "/kaggle/input/datasets/ziyadmuhammad/trashnet-training-script"
 
 print("Dataset path:", DATASET_PATH)
 print("Script path:", SCRIPT_PATH)
@@ -17,12 +16,6 @@ if not os.path.exists("data"):
     print("Symlink created: ./data ->", DATASET_PATH)
 else:
     print("./data already exists, skipping symlink")
-
-# 🔍 Debug: cek isi /kaggle/input secara rekursif
-print("\n=== ISI /kaggle/input (recursive) ===")
-for p in glob.glob("/kaggle/input/**/*", recursive=True):
-    print(p)
-print("========================\n")
 
 subprocess.run([
     "pip","install","-q",
