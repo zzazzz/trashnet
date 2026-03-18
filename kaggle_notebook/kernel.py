@@ -5,10 +5,17 @@ from huggingface_hub import login
 import shutil
 
 DATASET_PATH = "/kaggle/input/trashnet-data"
-SCRIPT_PATH = "/kaggle/input/datasets/ziyadmuhammad/trashnet-training-script"
+SCRIPT_PATH = "/kaggle/input/trashnet-training-script"
 
 print("Dataset path:", DATASET_PATH)
 print("Script path:", SCRIPT_PATH)
+
+# ✅ Fix: symlink supaya data_dir="data" di training script bisa resolve dengan benar
+if not os.path.exists("data"):
+    os.symlink(DATASET_PATH, "data")
+    print("Symlink created: ./data ->", DATASET_PATH)
+else:
+    print("./data already exists, skipping symlink")
 
 subprocess.run([
     "pip","install","-q",

@@ -23,7 +23,7 @@ config.batch_size = 32
 config.epochs = 50
 config.patience = 5
 
-data_dir = "/kaggle/input/trashnet-data"
+data_dir = "data"
 ds = load_dataset("imagefolder", data_dir=data_dir)
 
 labels = ds["train"].features["label"].names
