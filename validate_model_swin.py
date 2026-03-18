@@ -65,7 +65,7 @@ class TestDataset(Dataset):
             image = self.transform(image)
         return image, label
 
-test_dir = "/kaggle/input/datasets/ziyadmuhammad/trashnet-data/test"
+test_dir = "/kaggle/input/trashnet-data/test"
 test_dataset = TestDataset(test_dir, id2label, transform=val_transforms)
 test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=2)
 

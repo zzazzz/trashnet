@@ -24,7 +24,7 @@ config.epochs = 50        # naikkan epoch, biar early stopping yang handle
 config.patience = 5       # stop kalau 5 epoch tidak improve
 
 # Load dataset
-data_dir = "/kaggle/input/datasets/ziyadmuhammad/trashnet-data"
+data_dir = "/kaggle/input/trashnet-data"
 ds = load_dataset("imagefolder", data_dir=data_dir)
 
 labels = ds["train"].features["label"].names
