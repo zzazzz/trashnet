@@ -6,7 +6,7 @@ from datasets import load_dataset
 from torchvision import transforms
 from torch.utils.data import DataLoader, Dataset
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-from transformers import (SwinForImageClassification, AutoImageProcessor,
+from transformers import (SwinForImageClassification,
                           get_linear_schedule_with_warmup)
 from huggingface_hub import HfApi
 from PIL import Image
@@ -31,8 +31,9 @@ label2id = {label: i for i, label in enumerate(labels)}
 id2label = {i: label for i, label in enumerate(labels)}
 num_classes = len(labels)
 
-# ✅ Fix: AutoFeatureExtractor deprecated untuk vision, ganti AutoImageProcessor
-image_processor = AutoImageProcessor.from_pretrained("microsoft/swin-base-patch4-window7-224")
+# ✅ Fix: hardcode ImageNet mean/std, tidak perlu AutoFeatureExtractor/AutoImageProcessor
+IMAGENET_MEAN = [0.485, 0.456, 0.406]
+IMAGENET_STD  = [0.229, 0.224, 0.225]
 
 train_transforms = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -40,13 +41,13 @@ train_transforms = transforms.Compose([
     transforms.RandomVerticalFlip(),
     transforms.ColorJitter(brightness=0.2, contrast=0.2),
     transforms.ToTensor(),
-    transforms.Normalize(mean=image_processor.image_mean, std=image_processor.image_std)
+    transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD)
 ])
 
 val_transforms = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
-    transforms.Normalize(mean=image_processor.image_mean, std=image_processor.image_std)
+    transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD)
 ])
 
 class TrashDataset(Dataset):
