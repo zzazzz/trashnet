@@ -5,7 +5,7 @@ from huggingface_hub import login
 import shutil
 
 DATASET_PATH = "/kaggle/input/trashnet-data"
-SCRIPT_PATH = "/kaggle/input/trashnet-training-script"
+SCRIPT_PATH = "/kaggle/input/datasets/ziyadmuhammad/trashnet-training-script"
 
 print("Dataset path:", DATASET_PATH)
 print("Script path:", SCRIPT_PATH)
