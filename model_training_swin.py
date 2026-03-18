@@ -6,8 +6,7 @@ from datasets import load_dataset
 from torchvision import transforms
 from torch.utils.data import DataLoader, Dataset
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-from transformers import (SwinForImageClassification,
-                          get_linear_schedule_with_warmup)
+from transformers import SwinForImageClassification, get_linear_schedule_with_warmup
 from huggingface_hub import HfApi
 from PIL import Image
 import numpy as np
@@ -31,7 +30,6 @@ label2id = {label: i for i, label in enumerate(labels)}
 id2label = {i: label for i, label in enumerate(labels)}
 num_classes = len(labels)
 
-# ✅ Fix: hardcode ImageNet mean/std, tidak perlu AutoFeatureExtractor/AutoImageProcessor
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD  = [0.229, 0.224, 0.225]
 
@@ -95,7 +93,8 @@ scheduler = get_linear_schedule_with_warmup(
 
 best_val_f1 = 0.0
 patience_counter = 0
-os.makedirs("model", exist_ok=True)
+best_epoch = 0
+os.makedirs("model_swin", exist_ok=True)
 
 for epoch in range(config.epochs):
     model.train()
@@ -152,8 +151,9 @@ for epoch in range(config.epochs):
 
     if val_f1 > best_val_f1:
         best_val_f1 = val_f1
+        best_epoch = epoch + 1
         patience_counter = 0
-        model.save_pretrained("model/swin_best")
+        model.save_pretrained("model_swin/swin_best")
         print(f"  -> Best model saved (val_f1={val_f1:.4f})")
     else:
         patience_counter += 1
@@ -162,11 +162,23 @@ for epoch in range(config.epochs):
             print(f"Early stopping triggered at epoch {epoch+1}. Best val_f1: {best_val_f1:.4f}")
             break
 
-with open("model/label2id.json", "w") as f:
+with open("model_swin/label2id.json", "w") as f:
     json.dump(label2id, f)
-with open("model/id2label.json", "w") as f:
+with open("model_swin/id2label.json", "w") as f:
     json.dump(id2label, f)
 
+metrics = {
+    "val_accuracy": float(val_acc),
+    "val_f1": float(val_f1),
+    "val_precision": float(val_precision),
+    "val_recall": float(val_recall),
+    "best_epoch": best_epoch
+}
+
+with open("metrics_swin.json", "w") as f:
+    json.dump(metrics, f, indent=2)
+
+print("Metrics saved to metrics_swin.json")
 print("Training complete. Uploading to Hugging Face Hub...")
 
 api = HfApi()
@@ -175,7 +187,7 @@ repo_id = "ziyadazz/trashnet-swin"
 api.create_repo(repo_id=repo_id, exist_ok=True)
 api.upload_folder(
     repo_id=repo_id,
-    folder_path="model",
+    folder_path="model_swin",
     commit_message="Upload Swin Transformer trashnet model"
 )
 
