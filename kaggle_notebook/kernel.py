@@ -1,4 +1,5 @@
 import os
+import glob
 import subprocess
 import wandb
 from huggingface_hub import login
@@ -16,6 +17,16 @@ if not os.path.exists("data"):
     print("Symlink created: ./data ->", DATASET_PATH)
 else:
     print("./data already exists, skipping symlink")
+
+# 🔍 Debug: cek isi /kaggle/input untuk verifikasi path
+print("\n=== ISI /kaggle/input ===")
+for p in glob.glob("/kaggle/input/*"):
+    print(p)
+
+print("\n=== ISI SCRIPT_PATH ===")
+for p in glob.glob(f"{SCRIPT_PATH}/*"):
+    print(p)
+print("========================\n")
 
 subprocess.run([
     "pip","install","-q",
