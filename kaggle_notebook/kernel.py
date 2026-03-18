@@ -18,13 +18,9 @@ if not os.path.exists("data"):
 else:
     print("./data already exists, skipping symlink")
 
-# 🔍 Debug: cek isi /kaggle/input untuk verifikasi path
-print("\n=== ISI /kaggle/input ===")
-for p in glob.glob("/kaggle/input/*"):
-    print(p)
-
-print("\n=== ISI SCRIPT_PATH ===")
-for p in glob.glob(f"{SCRIPT_PATH}/*"):
+# 🔍 Debug: cek isi /kaggle/input secara rekursif
+print("\n=== ISI /kaggle/input (recursive) ===")
+for p in glob.glob("/kaggle/input/**/*", recursive=True):
     print(p)
 print("========================\n")
 
