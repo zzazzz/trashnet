@@ -10,11 +10,11 @@
 **Klasifikasi sampah otomatis dengan deep learning**
 
 [![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/zzazzz/trashnet/actions)
-[![Kaggle](https://img.shields.io/badge/Training-Kaggle_GPU-20BEFF?logo=kaggle&logoColor=white)](https://kaggle.com)
+[![Kaggle](https://img.shields.io/badge/Training-Kaggle_GPU-20BEFF?logo=kaggle&logoColor=white)](https://www.kaggle.com/code/ziyadmuhammad/trashnet-training)
 [![HuggingFace](https://img.shields.io/badge/Model-HuggingFace-FFD21E?logo=huggingface&logoColor=black)](https://huggingface.co/ziyadazz)
 [![WandB](https://img.shields.io/badge/Tracking-W%26B-FFBE00?logo=weightsandbiases&logoColor=black)](https://wandb.ai/ziyad-azzufari/trashnet-classification)
 
-> 🤖 Auto-generated report &nbsp;·&nbsp; Last updated: **2026-03-19 14:38 UTC**
+> 🤖 Auto-generated report &nbsp;·&nbsp; Last updated: **2026-03-19 15:25 UTC**
 
 </div>
 
@@ -27,12 +27,12 @@
 | | |
 |:---:|:---:|
 | **🥇 Best Model** | **Swin Transformer** |
-| **F1 Score** | **98.43%** |
-| **Accuracy** | **98.43%** |
+| **F1 Score** | **98.82%** |
+| **Accuracy** | **98.82%** |
 
 </div>
 
-> Swin Transformer unggul **2.23% F1** dan **2.23% accuracy** dibanding ResNet50 pada test set yang sama.
+> Swin Transformer unggul **1.62% F1** dan **1.57% accuracy** dibanding ResNet50 pada test set yang sama.
 
 ---
 
@@ -40,12 +40,12 @@
 
 | Metric | ResNet50 | Swin Transformer | Winner |
 |--------|:--------:|:----------------:|:------:|
-| Accuracy   | `96.20%` ██████████ | `98.43%` ██████████ | Swin 🏆 |
-| F1 Score   | `96.20%` ██████████ | `98.43%` ██████████ | Swin 🏆 |
-| Precision  | `96.30%` ██████████ | `98.44%` ██████████ | Swin 🏆 |
-| Recall     | `96.20%` ██████████ | `98.43%` ██████████ | Swin 🏆 |
-| Best Epoch | `7` | `7` | — |
-| GPU        | `unknown` | `unknown` | — |
+| Accuracy   | `97.25%` ██████████ | `98.82%` ██████████ | Swin 🏆 |
+| F1 Score   | `97.20%` ██████████ | `98.82%` ██████████ | Swin 🏆 |
+| Precision  | `97.35%` ██████████ | `98.85%` ██████████ | Swin 🏆 |
+| Recall     | `97.25%` ██████████ | `98.82%` ██████████ | Swin 🏆 |
+| Best Epoch | `8` | `6` | — |
+| GPU        | `GPU P100` | `GPU P100` | — |
 
 ---
 
@@ -58,12 +58,12 @@
 
 | Metric | Value |
 |--------|-------|
-| ✅ Accuracy   | `96.20%` |
-| 🎯 F1 Score   | `96.20%` |
-| 🔍 Precision  | `96.30%` |
-| 🔁 Recall     | `96.20%` |
-| 📈 Best Epoch | `7` |
-| 🖥️ GPU        | `unknown` |
+| ✅ Accuracy   | `97.25%` |
+| 🎯 F1 Score   | `97.20%` |
+| 🔍 Precision  | `97.35%` |
+| 🔁 Recall     | `97.25%` |
+| 📈 Best Epoch | `8` |
+| 🖥️ GPU        | `GPU P100` |
 
 🤗 **Model:** [ziyadazz/trashnet-resnet50](https://huggingface.co/ziyadazz/trashnet-resnet50)
 
@@ -76,12 +76,12 @@
 
 | Metric | Value |
 |--------|-------|
-| ✅ Accuracy   | `98.43%` |
-| 🎯 F1 Score   | `98.43%` |
-| 🔍 Precision  | `98.44%` |
-| 🔁 Recall     | `98.43%` |
-| 📈 Best Epoch | `7` |
-| 🖥️ GPU        | `unknown` |
+| ✅ Accuracy   | `98.82%` |
+| 🎯 F1 Score   | `98.82%` |
+| 🔍 Precision  | `98.85%` |
+| 🔁 Recall     | `98.82%` |
+| 📈 Best Epoch | `6` |
+| 🖥️ GPU        | `GPU P100` |
 
 🤗 **Model:** [ziyadazz/trashnet-swin](https://huggingface.co/ziyadazz/trashnet-swin)
 
@@ -154,7 +154,7 @@ Push ke main
              ▼
 ┌─────────────────────────────┐
 │   Trigger Kaggle Notebook   │
-│         (GPU T4/P100)       │
+│         (GPU P100)          │
 │                             │
 │  ① Training ResNet50        │
 │  ② Training Swin            │
@@ -165,7 +165,7 @@ Push ke main
              ▼
 ┌─────────────────────────────┐
 │  Download output Kaggle     │
-│  • metrics_*.json + gpu     │
+│  • metrics_*.json           │
 │  • *.png visualisasi        │
 └────────────┬────────────────┘
              │
@@ -191,6 +191,8 @@ trashnet/
 ├── results/                     ← Output visualisasi (auto-generated)
 │   ├── confusion_matrix_resnet.png
 │   ├── confusion_matrix_swin.png
+│   ├── training_history_resnet.png
+│   ├── training_history_swin.png
 │   ├── accuracy_per_class_resnet.png
 │   ├── accuracy_per_class_swin.png
 │   ├── sample_per_class_resnet.png
@@ -246,6 +248,6 @@ python validate_model_swin.py
 
 <div align="center">
 
-Made with ❤️ &nbsp;·&nbsp; Auto-updated by CI/CD &nbsp;·&nbsp; [View on WandB](https://wandb.ai/ziyad-azzufari/trashnet-classification)
+Created by Ziyad &nbsp;·&nbsp; Auto-updated by CI/CD &nbsp;·&nbsp; [View on WandB](https://wandb.ai/ziyad-azzufari/trashnet-classification)
 
 </div>
