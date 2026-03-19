@@ -102,14 +102,24 @@ jobs:
         }
         EOF
 
-        # ✅ Cek pakai status — lebih reliable dari grep list
+        # Zip subfolder manual karena kaggle datasets version tidak support --dir-mode
+        cd data
+        zip -r train.zip train/
+        zip -r val.zip val/
+        zip -r test.zip test/
+        cd ..
+
+        # Cek pakai status - lebih reliable dari grep list
         if kaggle datasets status $KAGGLE_USERNAME/trashnet-data > /dev/null 2>&1; then
-          echo "Dataset already exists → creating new version..."
+          echo "Dataset already exists, creating new version..."
           kaggle datasets version -p data -m "Update dataset - ${{ github.sha }}"
         else
-          echo "Dataset not found → creating for the first time..."
+          echo "Dataset not found, creating for the first time..."
           kaggle datasets create -p data --dir-mode zip
         fi
+
+        # Cleanup zip agar tidak ter-commit ke repo
+        rm -f data/train.zip data/val.zip data/test.zip
 
     # =================================
     # Wait image dataset ready
