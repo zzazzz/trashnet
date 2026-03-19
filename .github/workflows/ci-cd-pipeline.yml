@@ -161,8 +161,13 @@ jobs:
         sed -i "s|HF_KEY_PLACEHOLDER|${HF_API_KEY}|g" kaggle_notebook/kernel_deploy.py
         mv kaggle_notebook/kernel_deploy.py kaggle_notebook/kernel.py
 
-        # Update kernel-metadata.json dengan dataset sources terbaru
-        python3 scripts/pin_dataset_versions.py
+        # Update kernel-metadata.json — pastikan dataset sources selalu latest
+        # Tulis ulang field dataset_sources dengan jq (sudah tersedia di ubuntu-latest)
+        jq '.dataset_sources = ["ziyadmuhammad/trashnet-training-script", "ziyadmuhammad/trashnet-data"]' \
+          kaggle_notebook/kernel-metadata.json > /tmp/kernel-metadata-tmp.json
+        mv /tmp/kernel-metadata-tmp.json kaggle_notebook/kernel-metadata.json
+        echo "kernel-metadata.json updated:"
+        cat kaggle_notebook/kernel-metadata.json
 
         kaggle kernels push -p kaggle_notebook
 
