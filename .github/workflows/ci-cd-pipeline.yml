@@ -94,14 +94,10 @@ jobs:
       env:
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
-        # Zip dari DALAM folder data/ agar struktur di Kaggle jadi:
-        # /kaggle/input/trashnet-data/train/, val/, test/  (tanpa prefix data/)
-        cd data
-        zip -r ../trashnet-data.zip train/ val/ test/
-        cd ..
-
+        # Zip dari dalam data/ — symlink ./data mengarah ke root dataset
+        # Jadi struktur zip harus: train/, val/, test/ langsung di root
         mkdir -p kaggle_data_upload
-        mv trashnet-data.zip kaggle_data_upload/
+        cd data && zip -r ../kaggle_data_upload/trashnet-data.zip train/ val/ test/ && cd ..
 
         cat > kaggle_data_upload/dataset-metadata.json << EOF
         {
@@ -159,16 +155,33 @@ jobs:
         HF_API_KEY: ${{ secrets.HF_API_KEY }}
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
-        # ✅ Inject ke deploy copy, bukan file asli — jaga keamanan
+        # Inject API keys ke deploy copy, bukan file asli
         cp kaggle_notebook/kernel.py kaggle_notebook/kernel_deploy.py
         sed -i "s|WANDB_KEY_PLACEHOLDER|${WANDB_API_KEY}|g" kaggle_notebook/kernel_deploy.py
         sed -i "s|HF_KEY_PLACEHOLDER|${HF_API_KEY}|g" kaggle_notebook/kernel_deploy.py
         mv kaggle_notebook/kernel_deploy.py kaggle_notebook/kernel.py
 
-        # ✅ Update dataset source di kernel-metadata.json ke versi terbaru
-        # Ini memaksa Kaggle mount versi terbaru saat notebook dijalankan
-        SCRIPT_VERSION=$(kaggle datasets list --mine --csv | grep "trashnet-training-script" | cut -d',' -f2 || echo "1")
-        echo "Using script dataset version: $SCRIPT_VERSION"
+        # Ambil versi terbaru dataset lalu pin di kernel-metadata.json
+        # Ini memaksa Kaggle mount versi terbaru, bukan versi lama yang di-cache
+        DATA_VERSION=$(kaggle datasets status $KAGGLE_USERNAME/trashnet-data 2>/dev/null | grep -oP '(?<=currentDatasetVersionNumber: )\d+' || echo '')
+        SCRIPT_VERSION=$(kaggle datasets status $KAGGLE_USERNAME/trashnet-training-script 2>/dev/null | grep -oP '(?<=currentDatasetVersionNumber: )\d+' || echo '')
+        echo "trashnet-data version    : $DATA_VERSION"
+        echo "trashnet-training-script : $SCRIPT_VERSION"
+
+        python3 -c "
+import json, os
+with open('kaggle_notebook/kernel-metadata.json', 'r') as f:
+    meta = json.load(f)
+dv = os.environ.get('DATA_VERSION', '').strip()
+sv = os.environ.get('SCRIPT_VERSION', '').strip()
+meta['dataset_sources'] = [
+    'ziyadmuhammad/trashnet-training-script' + (':' + sv if sv else ''),
+    'ziyadmuhammad/trashnet-data' + (':' + dv if dv else ''),
+]
+with open('kaggle_notebook/kernel-metadata.json', 'w') as f:
+    json.dump(meta, f, indent=2)
+print('kernel-metadata.json updated:', meta['dataset_sources'])
+"
 
         kaggle kernels push -p kaggle_notebook
 
