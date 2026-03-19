@@ -80,7 +80,16 @@ model = SwinForImageClassification.from_pretrained(
 )
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
+
+# Deteksi GPU
+if torch.cuda.is_available():
+    gpu_name = torch.cuda.get_device_name(0)
+    gpu_mem  = torch.cuda.get_device_properties(0).total_memory / 1024**3
+    print(f"Using device: {device} — {gpu_name} ({gpu_mem:.1f} GB)")
+else:
+    gpu_name = "CPU"
+    print(f"Using device: {device}")
+
 model = model.to(device)
 
 criterion = nn.CrossEntropyLoss()
@@ -99,6 +108,13 @@ best_val_recall = 0.0
 best_epoch = 0
 patience_counter = 0
 os.makedirs("model_swin", exist_ok=True)
+
+# History untuk grafik training
+history = {
+    "train_loss": [], "val_loss": [],
+    "train_acc":  [], "val_acc":  [],
+    "train_f1":   [], "val_f1":   [],
+}
 
 for epoch in range(config.epochs):
     model.train()
@@ -149,6 +165,14 @@ for epoch in range(config.epochs):
         "val_f1": val_f1,
     })
 
+    # Simpan ke history
+    history["train_loss"].append(train_loss / len(train_loader))
+    history["val_loss"].append(val_loss / len(val_loader))
+    history["train_acc"].append(train_acc)
+    history["val_acc"].append(val_acc)
+    history["train_f1"].append(train_f1)
+    history["val_f1"].append(val_f1)
+
     print(f"Epoch {epoch+1}/{config.epochs} | "
           f"Train Loss: {train_loss/len(train_loader):.4f} | Train Acc: {train_acc:.4f} | Train F1: {train_f1:.4f} | "
           f"Val Loss: {val_loss/len(val_loader):.4f} | Val Acc: {val_acc:.4f} | Val F1: {val_f1:.4f}")
@@ -158,7 +182,7 @@ for epoch in range(config.epochs):
         best_val_acc = val_acc
         best_val_precision = val_precision
         best_val_recall = val_recall
-        best_epoch = epoch + 1  # ✅ simpan epoch terbaik (1-indexed)
+        best_epoch = epoch + 1  # simpan epoch terbaik (1-indexed)
         patience_counter = 0
         model.save_pretrained("model_swin/swin_best")
         image_processor.save_pretrained("model_swin/swin_best")
@@ -175,13 +199,19 @@ with open("model_swin/label2id.json", "w") as f:
 with open("model_swin/id2label.json", "w") as f:
     json.dump(id2label, f)
 
-# ✅ Simpan metrics dari epoch terbaik (bukan epoch terakhir)
+# Simpan history training untuk grafik
+with open("history_swin.json", "w") as f:
+    json.dump(history, f, indent=2)
+print("Training history saved to history_swin.json")
+
+# Simpan metrics dari epoch terbaik + info GPU
 metrics = {
     "val_accuracy": float(best_val_acc),
     "val_f1": float(best_val_f1),
     "val_precision": float(best_val_precision),
     "val_recall": float(best_val_recall),
-    "best_epoch": best_epoch
+    "best_epoch": best_epoch,
+    "gpu": gpu_name
 }
 
 with open("metrics_swin.json", "w") as f:

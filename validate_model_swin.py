@@ -214,13 +214,71 @@ plt.savefig("accuracy_per_class_swin.png", dpi=150)  # ✅ suffix _swin
 plt.close()
 print("Accuracy per class saved to accuracy_per_class_swin.png")
 
-# ── 5. Metrics ───────────────────────────────────────────────────────────────
+
+# ── 5. Grafik Training History ───────────────────────────────────────────────
+history_path = "history_swin.json"
+if os.path.exists(history_path):
+    with open(history_path, "r") as hf:
+        history = json.load(hf)
+
+    ep_list = list(range(1, len(history["train_loss"]) + 1))
+
+    # best_epoch sudah terbaca dari metrics di atas
+    best_ep = best_epoch
+
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+    fig.suptitle("Training History - Swin Transformer", fontsize=16, fontweight="bold")
+
+    # Loss
+    ax = axes[0]
+    ax.plot(ep_list, history["train_loss"], label="Train Loss", color="#3498db", linewidth=2)
+    ax.plot(ep_list, history["val_loss"],   label="Val Loss",   color="#e74c3c", linewidth=2)
+    if best_ep and best_ep <= len(ep_list):
+        ax.axvline(x=best_ep, color="#2ecc71", linestyle="--", linewidth=1.5, label=f"Best ({best_ep})")
+    ax.set_title("Loss per Epoch")
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Loss")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    # Accuracy
+    ax = axes[1]
+    ax.plot(ep_list, [v * 100 for v in history["train_acc"]], label="Train Acc", color="#3498db", linewidth=2)
+    ax.plot(ep_list, [v * 100 for v in history["val_acc"]],   label="Val Acc",   color="#e74c3c", linewidth=2)
+    if best_ep and best_ep <= len(ep_list):
+        ax.axvline(x=best_ep, color="#2ecc71", linestyle="--", linewidth=1.5, label=f"Best ({best_ep})")
+    ax.set_title("Accuracy per Epoch")
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Accuracy (%)")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    # F1
+    ax = axes[2]
+    ax.plot(ep_list, [v * 100 for v in history["train_f1"]], label="Train F1", color="#3498db", linewidth=2)
+    ax.plot(ep_list, [v * 100 for v in history["val_f1"]],   label="Val F1",   color="#e74c3c", linewidth=2)
+    if best_ep and best_ep <= len(ep_list):
+        ax.axvline(x=best_ep, color="#2ecc71", linestyle="--", linewidth=1.5, label=f"Best ({best_ep})")
+    ax.set_title("F1 Score per Epoch")
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("F1 Score (%)")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig("training_history_swin.png", dpi=150, bbox_inches="tight")
+    plt.close()
+    print("Training history chart saved to training_history_swin.png")
+else:
+    print(f"WARNING: {history_path} not found, skipping training history chart")
+
+# ── 6. Metrics ───────────────────────────────────────────────────────────────
 val_acc = accuracy_score(true_labels, pred_labels)
 val_precision, val_recall, val_f1, _ = precision_recall_fscore_support(
     true_labels, pred_labels, average='weighted'
 )
 
-# best_epoch diambil dari metrics training yang disimpan di working dir
+# best_epoch diambil dari metrics training (ditulis training script di sesi yang sama)
 try:
     with open("metrics_swin.json", "r") as f:
         train_metrics = json.load(f)
@@ -228,12 +286,13 @@ try:
 except FileNotFoundError:
     best_epoch = 0
 
+# Tulis ulang metrics dengan hasil test set + best_epoch dari training
 metrics = {
     "val_accuracy": float(val_acc),
     "val_f1": float(val_f1),
     "val_precision": float(val_precision),
     "val_recall": float(val_recall),
-    "best_epoch": best_epoch
+    "best_epoch": best_epoch  # dipertahankan dari training
 }
 
 with open("metrics_swin.json", "w") as f:
@@ -245,6 +304,7 @@ print("  - sample_per_class_swin.png")
 print("  - prediction_results_swin.png")
 print("  - accuracy_per_class_swin.png")
 print("  - metrics_swin.json")
+print("  - training_history_swin.png")
 print(f"\nTest Accuracy : {val_acc:.4f}")
 print(f"Test F1 Score : {val_f1:.4f}")
 print(f"Best Epoch    : {best_epoch}")
