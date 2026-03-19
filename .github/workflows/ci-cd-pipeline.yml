@@ -161,13 +161,7 @@ jobs:
         sed -i "s|HF_KEY_PLACEHOLDER|${HF_API_KEY}|g" kaggle_notebook/kernel_deploy.py
         mv kaggle_notebook/kernel_deploy.py kaggle_notebook/kernel.py
 
-        # Ambil versi terbaru dataset lalu pin di kernel-metadata.json
-        # Ini memaksa Kaggle mount versi terbaru, bukan versi lama yang di-cache
-        DATA_VERSION=$(kaggle datasets status $KAGGLE_USERNAME/trashnet-data 2>/dev/null | grep -oP '(?<=currentDatasetVersionNumber: )\d+' || echo '')
-        SCRIPT_VERSION=$(kaggle datasets status $KAGGLE_USERNAME/trashnet-training-script 2>/dev/null | grep -oP '(?<=currentDatasetVersionNumber: )\d+' || echo '')
-        echo "trashnet-data version    : $DATA_VERSION"
-        echo "trashnet-training-script : $SCRIPT_VERSION"
-
+        # Update kernel-metadata.json dengan dataset sources terbaru
         python3 scripts/pin_dataset_versions.py
 
         kaggle kernels push -p kaggle_notebook
