@@ -6,7 +6,8 @@ from datasets import load_dataset
 from torchvision import transforms
 from torch.utils.data import DataLoader, Dataset
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-from transformers import SwinForImageClassification, SwinConfig, SwinImageProcessor
+from transformers import (SwinForImageClassification, AutoImageProcessor,
+                          get_linear_schedule_with_warmup)
 from huggingface_hub import HfApi
 from PIL import Image
 import numpy as np
@@ -30,8 +31,8 @@ label2id = {label: i for i, label in enumerate(labels)}
 id2label = {i: label for i, label in enumerate(labels)}
 num_classes = len(labels)
 
-IMAGENET_MEAN = [0.485, 0.456, 0.406]
-IMAGENET_STD  = [0.229, 0.224, 0.225]
+# ✅ AutoImageProcessor menggantikan SwinImageProcessor yang deprecated
+image_processor = AutoImageProcessor.from_pretrained("microsoft/swin-base-patch4-window7-224")
 
 train_transforms = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -39,13 +40,13 @@ train_transforms = transforms.Compose([
     transforms.RandomVerticalFlip(),
     transforms.ColorJitter(brightness=0.2, contrast=0.2),
     transforms.ToTensor(),
-    transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD)
+    transforms.Normalize(mean=image_processor.image_mean, std=image_processor.image_std)
 ])
 
 val_transforms = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
-    transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD)
+    transforms.Normalize(mean=image_processor.image_mean, std=image_processor.image_std)
 ])
 
 class TrashDataset(Dataset):
@@ -70,29 +71,11 @@ val_dataset = TrashDataset(ds["validation"], transform=val_transforms)
 train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=2)
 val_loader = DataLoader(val_dataset, batch_size=config.batch_size, shuffle=False, num_workers=2)
 
-# ✅ Fix: load via SwinConfig dulu, lalu from_pretrained dengan config
-# Ini menghindari auto feature extractor loading di transformers versi baru
-# Load image_processor dari microsoft supaya preprocessor_config.json yang
-# ter-upload ke HF selalu benar dan linked ke microsoft Swin
-image_processor = SwinImageProcessor(
-    do_resize=True,
-    size={"height": 224, "width": 224},
-    resample=3,
-    do_rescale=True,
-    rescale_factor=1/255,
-    do_normalize=True,
-    image_mean=[0.485, 0.456, 0.406],
-    image_std=[0.229, 0.224, 0.225],
-)
-
-swin_config = SwinConfig.from_pretrained("microsoft/swin-base-patch4-window7-224")
-swin_config.num_labels = num_classes
-swin_config.id2label = id2label
-swin_config.label2id = label2id
-
 model = SwinForImageClassification.from_pretrained(
     "microsoft/swin-base-patch4-window7-224",
-    config=swin_config,
+    num_labels=num_classes,
+    id2label=id2label,
+    label2id=label2id,
     ignore_mismatched_sizes=True
 )
 
@@ -110,8 +93,11 @@ scheduler = get_linear_schedule_with_warmup(
 )
 
 best_val_f1 = 0.0
-patience_counter = 0
+best_val_acc = 0.0
+best_val_precision = 0.0
+best_val_recall = 0.0
 best_epoch = 0
+patience_counter = 0
 os.makedirs("model_swin", exist_ok=True)
 
 for epoch in range(config.epochs):
@@ -169,7 +155,10 @@ for epoch in range(config.epochs):
 
     if val_f1 > best_val_f1:
         best_val_f1 = val_f1
-        best_epoch = epoch + 1
+        best_val_acc = val_acc
+        best_val_precision = val_precision
+        best_val_recall = val_recall
+        best_epoch = epoch + 1  # ✅ simpan epoch terbaik (1-indexed)
         patience_counter = 0
         model.save_pretrained("model_swin/swin_best")
         image_processor.save_pretrained("model_swin/swin_best")
@@ -186,22 +175,24 @@ with open("model_swin/label2id.json", "w") as f:
 with open("model_swin/id2label.json", "w") as f:
     json.dump(id2label, f)
 
+# ✅ Simpan metrics dari epoch terbaik (bukan epoch terakhir)
 metrics = {
-    "val_accuracy": float(val_acc),
-    "val_f1": float(val_f1),
-    "val_precision": float(val_precision),
-    "val_recall": float(val_recall),
+    "val_accuracy": float(best_val_acc),
+    "val_f1": float(best_val_f1),
+    "val_precision": float(best_val_precision),
+    "val_recall": float(best_val_recall),
     "best_epoch": best_epoch
 }
 
 with open("metrics_swin.json", "w") as f:
     json.dump(metrics, f, indent=2)
 
-print("Metrics saved to metrics_swin.json")
+print(f"Metrics saved to metrics_swin.json (best epoch: {best_epoch})")
 print("Training complete. Uploading to Hugging Face Hub...")
 
 api = HfApi()
 repo_id = "ziyadazz/trashnet-swin"
+
 api.create_repo(repo_id=repo_id, exist_ok=True)
 api.upload_folder(
     repo_id=repo_id,

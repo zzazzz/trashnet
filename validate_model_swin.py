@@ -2,56 +2,55 @@ import os
 import json
 import torch
 import numpy as np
+from torchvision import transforms
 from torch.utils.data import DataLoader, Dataset
-from sklearn.metrics import confusion_matrix, classification_report, accuracy_score, precision_recall_fscore_support
-from transformers import SwinForImageClassification, SwinImageProcessor
+from sklearn.metrics import (confusion_matrix, classification_report,
+                             accuracy_score, precision_recall_fscore_support)
+from transformers import SwinForImageClassification
 from huggingface_hub import snapshot_download
 from PIL import Image
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# 🔥 OPTIONAL: clear cache biar ga pakai config lama
-import shutil
-shutil.rmtree("/root/.cache/huggingface", ignore_errors=True)
-
 print("Loading model from Hugging Face Hub...")
-snapshot_download(repo_id="ziyadazz/trashnet-swin", local_dir="model_hf")
+snapshot_download(repo_id="ziyadazz/trashnet-swin", local_dir="model_hf_swin")
 
 # Load label mappings
-with open("model_hf/id2label.json", "r") as f:
+with open("model_hf_swin/id2label.json", "r") as f:
     id2label = {int(k): v for k, v in json.load(f).items()}
 
 num_classes = len(id2label)
 class_names = [id2label[i] for i in range(num_classes)]
 
-# Device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
-# Load model
-model = SwinForImageClassification.from_pretrained("model_hf/swin_best")
+# Load Swin model
+model = SwinForImageClassification.from_pretrained("model_hf_swin/swin_best")
 model = model.to(device)
 model.eval()
 
-# ✅ FIX: load processor (WAJIB)
-processor = SwinImageProcessor.from_pretrained("model_hf/swin_best")
+# Transforms (ImageNet normalization)
+val_transforms = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                         std=[0.229, 0.224, 0.225])
+])
 
 # Custom Dataset
 class TestDataset(Dataset):
-    def __init__(self, test_dir, id2label, processor):
+    def __init__(self, test_dir, id2label, transform=None):
         self.samples = []
         self.raw_samples = []
-        self.processor = processor
-
+        self.transform = transform
         for class_idx, class_name in id2label.items():
             class_folder = os.path.join(test_dir, class_name)
             if not os.path.isdir(class_folder):
                 continue
-
             for image_name in os.listdir(class_folder):
                 if not image_name.lower().endswith(('.jpg', '.jpeg', '.png')):
                     continue
-
                 image_path = os.path.join(class_folder, image_name)
                 self.samples.append((image_path, class_idx))
                 self.raw_samples.append((image_path, class_idx))
@@ -62,17 +61,12 @@ class TestDataset(Dataset):
     def __getitem__(self, idx):
         image_path, label = self.samples[idx]
         image = Image.open(image_path).convert("RGB")
+        if self.transform:
+            image = self.transform(image)
+        return image, label
 
-        # ✅ pakai processor (bukan transform manual)
-        inputs = self.processor(image, return_tensors="pt")
-        pixel_values = inputs["pixel_values"].squeeze(0)
-
-        return pixel_values, label
-
-
-# Load test dataset
 test_dir = "data/test"
-test_dataset = TestDataset(test_dir, id2label, processor=processor)
+test_dataset = TestDataset(test_dir, id2label, transform=val_transforms)
 test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=2)
 
 # Inference
@@ -82,10 +76,8 @@ pred_labels = []
 with torch.no_grad():
     for images, labels in test_loader:
         images = images.to(device)
-
         outputs = model(pixel_values=images)
         preds = outputs.logits.argmax(dim=1).cpu().numpy()
-
         pred_labels.extend(preds)
         true_labels.extend(labels.numpy())
 
@@ -94,63 +86,105 @@ pred_labels = np.array(pred_labels)
 
 # Classification Report
 report = classification_report(true_labels, pred_labels, target_names=class_names)
-print("\nClassification Report:\n")
+print("Classification Report:")
 print(report)
 
-# ── 1. Confusion Matrix ─────────────────────────
+# ── 1. Confusion Matrix ──────────────────────────────────────────────────────
 cm = confusion_matrix(true_labels, pred_labels)
 
 plt.figure(figsize=(10, 7))
-sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
+sns.heatmap(cm, annot=True, fmt="d", cmap="Purples",
             xticklabels=class_names, yticklabels=class_names)
 plt.xlabel("Predicted")
 plt.ylabel("True")
 plt.title("Confusion Matrix - Swin Transformer")
 plt.tight_layout()
-plt.savefig("confusion_matrix.png", dpi=150)
+plt.savefig("confusion_matrix_swin.png", dpi=150)   # ✅ suffix _swin
 plt.close()
+print("Confusion matrix saved to confusion_matrix_swin.png")
 
-print("Confusion matrix saved")
-
-# ── 2. Sample per class ─────────────────────────
+# ── 2. 5 Sample Per Kelas ────────────────────────────────────────────────────
 SAMPLES_PER_CLASS = 5
 n_classes = len(class_names)
 
 class_image_paths = {class_name: [] for class_name in class_names}
-
 for image_path, class_idx in test_dataset.raw_samples:
     class_name = id2label[class_idx]
     if len(class_image_paths[class_name]) < SAMPLES_PER_CLASS:
         class_image_paths[class_name].append(image_path)
 
-fig, axes = plt.subplots(n_classes, SAMPLES_PER_CLASS,
-                         figsize=(SAMPLES_PER_CLASS * 3, n_classes * 3))
+fig, axes = plt.subplots(
+    n_classes, SAMPLES_PER_CLASS,
+    figsize=(SAMPLES_PER_CLASS * 3, n_classes * 3)
+)
+fig.suptitle("5 Sample Per Kelas - Test Set (Swin Transformer)", fontsize=16, fontweight="bold", y=1.01)
 
 for row_idx, class_name in enumerate(class_names):
     paths = class_image_paths[class_name]
     for col_idx in range(SAMPLES_PER_CLASS):
         ax = axes[row_idx][col_idx]
-
         if col_idx < len(paths):
             img = Image.open(paths[col_idx]).convert("RGB").resize((224, 224))
             ax.imshow(img)
         else:
             ax.imshow(np.ones((224, 224, 3), dtype=np.uint8) * 200)
-
+            ax.text(112, 112, "N/A", ha="center", va="center", fontsize=12, color="gray")
         ax.axis("off")
-
         if col_idx == 0:
-            ax.set_ylabel(class_name, rotation=0, labelpad=60)
+            ax.set_ylabel(class_name, fontsize=12, fontweight="bold",
+                          rotation=0, labelpad=80, va="center")
 
 plt.tight_layout()
-plt.savefig("sample_per_class.png", dpi=150)
+plt.savefig("sample_per_class_swin.png", dpi=150, bbox_inches="tight")  # ✅ suffix _swin
 plt.close()
+print("Sample visualization saved to sample_per_class_swin.png")
 
-print("Sample visualization saved")
+# ── 3. Prediksi Benar vs Salah ───────────────────────────────────────────────
+fig, axes = plt.subplots(
+    n_classes, SAMPLES_PER_CLASS,
+    figsize=(SAMPLES_PER_CLASS * 3, n_classes * 3)
+)
+fig.suptitle("Contoh Prediksi Per Kelas - Swin Transformer (Hijau=Benar, Merah=Salah)",
+             fontsize=14, fontweight="bold", y=1.01)
 
-# ── 3. Accuracy per class ───────────────────────
+class_results = {class_name: [] for class_name in class_names}
+for i, (image_path, true_idx) in enumerate(test_dataset.raw_samples):
+    if i >= len(pred_labels):
+        break
+    class_name = id2label[true_idx]
+    pred_name = id2label[pred_labels[i]]
+    is_correct = (true_idx == pred_labels[i])
+    if len(class_results[class_name]) < SAMPLES_PER_CLASS:
+        class_results[class_name].append((image_path, pred_name, is_correct))
+
+for row_idx, class_name in enumerate(class_names):
+    results = class_results[class_name]
+    for col_idx in range(SAMPLES_PER_CLASS):
+        ax = axes[row_idx][col_idx]
+        if col_idx < len(results):
+            image_path, pred_name, is_correct = results[col_idx]
+            img = Image.open(image_path).convert("RGB").resize((224, 224))
+            ax.imshow(img)
+            color = "green" if is_correct else "red"
+            label = f"✓ {pred_name}" if is_correct else f"✗ {pred_name}"
+            ax.set_title(label, fontsize=8, color=color, fontweight="bold")
+            for spine in ax.spines.values():
+                spine.set_edgecolor(color)
+                spine.set_linewidth(3)
+        else:
+            ax.imshow(np.ones((224, 224, 3), dtype=np.uint8) * 200)
+        ax.axis("off")
+        if col_idx == 0:
+            ax.set_ylabel(class_name, fontsize=11, fontweight="bold",
+                          rotation=0, labelpad=80, va="center")
+
+plt.tight_layout()
+plt.savefig("prediction_results_swin.png", dpi=150, bbox_inches="tight")  # ✅ suffix _swin
+plt.close()
+print("Prediction results saved to prediction_results_swin.png")
+
+# ── 4. Akurasi Per Kelas ─────────────────────────────────────────────────────
 per_class_acc = []
-
 for i in range(len(class_names)):
     mask = true_labels == i
     if mask.sum() > 0:
@@ -159,35 +193,57 @@ for i in range(len(class_names)):
     else:
         per_class_acc.append(0)
 
+colors = ["#2ecc71" if a >= 80 else "#e67e22" if a >= 60 else "#e74c3c"
+          for a in per_class_acc]
+
 plt.figure(figsize=(10, 5))
-plt.bar(class_names, per_class_acc)
-plt.ylabel("Accuracy (%)")
-plt.title("Accuracy per Class")
-plt.xticks(rotation=30)
+bars = plt.bar(class_names, per_class_acc, color=colors, edgecolor="white", linewidth=1.2)
+plt.ylim(0, 110)
+plt.ylabel("Accuracy (%)", fontsize=12)
+plt.title("Akurasi Per Kelas - Swin Transformer", fontsize=14, fontweight="bold")
+plt.xticks(fontsize=11)
+
+for bar, acc in zip(bars, per_class_acc):
+    plt.text(bar.get_x() + bar.get_width() / 2,
+             bar.get_height() + 1.5,
+             f"{acc:.1f}%", ha="center", va="bottom", fontsize=10, fontweight="bold")
+
 plt.tight_layout()
-plt.savefig("accuracy_per_class.png", dpi=150)
+plt.savefig("accuracy_per_class_swin.png", dpi=150)  # ✅ suffix _swin
 plt.close()
+print("Accuracy per class saved to accuracy_per_class_swin.png")
 
-print("Accuracy chart saved")
-
-# ── 4. Metrics ──────────────────────────────────
+# ── 5. Metrics ───────────────────────────────────────────────────────────────
 val_acc = accuracy_score(true_labels, pred_labels)
 val_precision, val_recall, val_f1, _ = precision_recall_fscore_support(
     true_labels, pred_labels, average='weighted'
 )
+
+# ✅ best_epoch diambil dari metrics training yang sudah disimpan
+try:
+    with open("kaggle_output/metrics_swin.json", "r") as f:
+        train_metrics = json.load(f)
+    best_epoch = train_metrics.get("best_epoch", 0)
+except FileNotFoundError:
+    best_epoch = 0
 
 metrics = {
     "val_accuracy": float(val_acc),
     "val_f1": float(val_f1),
     "val_precision": float(val_precision),
     "val_recall": float(val_recall),
-    "best_epoch": 0
+    "best_epoch": best_epoch
 }
 
-# ✅ FIX nama file
 with open("metrics_swin.json", "w") as f:
     json.dump(metrics, f, indent=2)
 
-print("\nMetrics saved to metrics_swin.json")
-
-print("\nDONE ✅")
+print("\nSemua output tersimpan:")
+print("  - confusion_matrix_swin.png")
+print("  - sample_per_class_swin.png")
+print("  - prediction_results_swin.png")
+print("  - accuracy_per_class_swin.png")
+print("  - metrics_swin.json")
+print(f"\nTest Accuracy : {val_acc:.4f}")
+print(f"Test F1 Score : {val_f1:.4f}")
+print(f"Best Epoch    : {best_epoch}")

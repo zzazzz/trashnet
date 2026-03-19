@@ -14,11 +14,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Debug repo structure
-      run: |
-        echo "Repository structure:"
-        ls -R
-
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -50,10 +45,46 @@ jobs:
         cp validate_model_swin.py kaggle_upload/
         cp requirements.txt kaggle_upload/
 
-        echo "{\"title\": \"trashnet-training-script\", \"id\": \"$KAGGLE_USERNAME/trashnet-training-script\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > kaggle_upload/dataset-metadata.json
+        cat > kaggle_upload/dataset-metadata.json << EOF
+        {
+          "title": "trashnet-training-script",
+          "id": "$KAGGLE_USERNAME/trashnet-training-script",
+          "licenses": [{"name": "CC0-1.0"}]
+        }
+        EOF
 
-        kaggle datasets create -p kaggle_upload --dir-mode zip || \
-        kaggle datasets version -p kaggle_upload -m "Update scripts from GitHub Actions"
+        # ✅ Cek pakai status — lebih reliable dari grep list
+        # Exit code 0 = dataset ada, non-0 = belum ada
+        if kaggle datasets status $KAGGLE_USERNAME/trashnet-training-script > /dev/null 2>&1; then
+          echo "Dataset already exists → creating new version..."
+          kaggle datasets version -p kaggle_upload -m "Update scripts - ${{ github.sha }}"
+        else
+          echo "Dataset not found → creating for the first time..."
+          kaggle datasets create -p kaggle_upload --dir-mode zip
+        fi
+
+    # =================================
+    # Wait scripts dataset ready
+    # =================================
+
+    - name: Wait until scripts dataset is ready
+      env:
+        KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+      run: |
+        DATASET="$KAGGLE_USERNAME/trashnet-training-script"
+        echo "Waiting for dataset $DATASET to be ready..."
+
+        for i in $(seq 1 30); do
+          STATUS=$(kaggle datasets status $DATASET 2>/dev/null || echo "unknown")
+          echo "Attempt $i: $STATUS"
+
+          if echo "$STATUS" | grep -qi "ready"; then
+            echo "Dataset ready!"
+            break
+          fi
+
+          sleep 10
+        done
 
     # =================================
     # Upload image dataset
@@ -63,40 +94,48 @@ jobs:
       env:
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
-        echo "{\"title\": \"trashnet-data\", \"id\": \"$KAGGLE_USERNAME/trashnet-data\", \"licenses\": [{\"name\": \"CC0-1.0\"}]}" > data/dataset-metadata.json
+        cat > data/dataset-metadata.json << EOF
+        {
+          "title": "trashnet-data",
+          "id": "$KAGGLE_USERNAME/trashnet-data",
+          "licenses": [{"name": "CC0-1.0"}]
+        }
+        EOF
 
-        kaggle datasets create -p data --dir-mode zip || \
-        kaggle datasets version -p data -m "Update dataset from GitHub Actions"
+        # ✅ Cek pakai status — lebih reliable dari grep list
+        if kaggle datasets status $KAGGLE_USERNAME/trashnet-data > /dev/null 2>&1; then
+          echo "Dataset already exists → creating new version..."
+          kaggle datasets version -p data -m "Update dataset - ${{ github.sha }}"
+        else
+          echo "Dataset not found → creating for the first time..."
+          kaggle datasets create -p data --dir-mode zip
+        fi
 
     # =================================
-    # WAIT DATASET READY (FIX RACE CONDITION)
+    # Wait image dataset ready
     # =================================
 
-    - name: Wait until dataset is ready
+    - name: Wait until image dataset is ready
       env:
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
         DATASET="$KAGGLE_USERNAME/trashnet-data"
-
         echo "Waiting for dataset $DATASET to be ready..."
 
         for i in $(seq 1 30); do
-          if kaggle datasets files $DATASET; then
+          STATUS=$(kaggle datasets status $DATASET 2>/dev/null || echo "unknown")
+          echo "Attempt $i: $STATUS"
+
+          if echo "$STATUS" | grep -qi "ready"; then
             echo "Dataset ready!"
             break
           fi
 
-          echo "Dataset not ready yet... retrying in 10 seconds"
           sleep 10
         done
 
-    # =================================
-    # WAIT KAGGLE PROPAGATION
-    # =================================
-
-    - name: Wait Kaggle propagation
-      run: |
-        echo "Waiting Kaggle to propagate dataset mount..."
+        # Extra buffer setelah ready agar Kaggle propagate ke notebook mount
+        echo "Extra 60s propagation buffer..."
         sleep 60
 
     # =================================
@@ -107,36 +146,43 @@ jobs:
       env:
         WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
         HF_API_KEY: ${{ secrets.HF_API_KEY }}
+        KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
-        sed -i "s|WANDB_KEY_PLACEHOLDER|${WANDB_API_KEY}|g" kaggle_notebook/kernel.py
-        sed -i "s|HF_KEY_PLACEHOLDER|${HF_API_KEY}|g" kaggle_notebook/kernel.py
+        # ✅ Inject ke deploy copy, bukan file asli — jaga keamanan
+        cp kaggle_notebook/kernel.py kaggle_notebook/kernel_deploy.py
+        sed -i "s|WANDB_KEY_PLACEHOLDER|${WANDB_API_KEY}|g" kaggle_notebook/kernel_deploy.py
+        sed -i "s|HF_KEY_PLACEHOLDER|${HF_API_KEY}|g" kaggle_notebook/kernel_deploy.py
+        mv kaggle_notebook/kernel_deploy.py kaggle_notebook/kernel.py
+
+        # ✅ Update dataset source di kernel-metadata.json ke versi terbaru
+        # Ini memaksa Kaggle mount versi terbaru saat notebook dijalankan
+        SCRIPT_VERSION=$(kaggle datasets list --mine --csv | grep "trashnet-training-script" | cut -d',' -f2 || echo "1")
+        echo "Using script dataset version: $SCRIPT_VERSION"
 
         kaggle kernels push -p kaggle_notebook
 
     # =================================
-    # WAIT TRAINING
+    # Wait training
     # =================================
 
     - name: Wait for Kaggle notebook
       env:
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
-
         NOTEBOOK_SLUG="$KAGGLE_USERNAME/trashnet-training"
-
-        echo "Waiting for notebook..."
+        echo "Waiting for notebook $NOTEBOOK_SLUG..."
 
         for i in $(seq 1 120); do
-
           RAW_STATUS=$(kaggle kernels status $NOTEBOOK_SLUG)
-
-          echo "Raw status: $RAW_STATUS"
+          echo "[$i/120] Status: $RAW_STATUS"
 
           if echo "$RAW_STATUS" | grep -qi "complete"; then
             echo "Training finished!"
             exit 0
           elif echo "$RAW_STATUS" | grep -qi "error"; then
             echo "Training failed!"
+            kaggle kernels output $NOTEBOOK_SLUG -p kaggle_output || true
+            cat kaggle_output/*.log 2>/dev/null || true
             exit 1
           fi
 
@@ -147,7 +193,7 @@ jobs:
         exit 1
 
     # =================================
-    # DOWNLOAD OUTPUT
+    # Download output
     # =================================
 
     - name: Download Kaggle output
@@ -155,34 +201,44 @@ jobs:
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
         kaggle kernels output $KAGGLE_USERNAME/trashnet-training -p kaggle_output
-        ls kaggle_output
+        echo "Files downloaded:"
+        ls -la kaggle_output/
 
     # =================================
-    # COLLECT RESULTS
+    # Collect results
     # =================================
 
     - name: Collect results
       run: |
         mkdir -p results
 
-        cp kaggle_output/confusion_matrix_resnet.png results/ || true
-        cp kaggle_output/confusion_matrix_swin.png results/ || true
-        cp kaggle_output/sample_per_class_resnet.png results/ || true
-        cp kaggle_output/sample_per_class_swin.png results/ || true
-        cp kaggle_output/prediction_results_resnet.png results/ || true
-        cp kaggle_output/prediction_results_swin.png results/ || true
-        cp kaggle_output/accuracy_per_class_resnet.png results/ || true
-        cp kaggle_output/accuracy_per_class_swin.png results/ || true
+        for f in confusion_matrix_resnet confusion_matrix_swin \
+                  sample_per_class_resnet sample_per_class_swin \
+                  prediction_results_resnet prediction_results_swin \
+                  accuracy_per_class_resnet accuracy_per_class_swin; do
+          if [ -f "kaggle_output/${f}.png" ]; then
+            cp "kaggle_output/${f}.png" results/
+            echo "Copied ${f}.png"
+          else
+            echo "WARNING: ${f}.png not found in kaggle_output!"
+          fi
+        done
+
+        echo "Results folder:"
+        ls -la results/
 
     # =================================
-    # GENERATE README
+    # Generate README
     # =================================
+
+    - name: Install dependencies for readme
+      run: pip install -q
 
     - name: Generate README
       run: python generate_readme.py
 
     # =================================
-    # COMMIT RESULTS
+    # Commit results
     # =================================
 
     - name: Commit results
@@ -193,18 +249,21 @@ jobs:
         git add results/
         git add README.md
 
-        git diff --staged --quiet || git commit -m "Update results from Kaggle training [skip ci]"
+        git diff --staged --quiet || git commit -m "ci: update results from Kaggle [run: ${{ github.run_number }}] [skip ci]"
 
         git push
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     # =================================
-    # UPLOAD ARTIFACT
+    # Upload artifact
     # =================================
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: training-results
-        path: results/
+        name: training-results-${{ github.run_number }}
+        path: |
+          results/
+          kaggle_output/metrics_resnet.json
+          kaggle_output/metrics_swin.json

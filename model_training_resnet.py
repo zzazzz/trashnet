@@ -20,8 +20,8 @@ wandb.init(project="trashnet-classification", entity="ziyad-azzufari")
 config = wandb.config
 config.learning_rate = 1e-4
 config.batch_size = 32
-config.epochs = 50        # naikkan epoch, biar early stopping yang handle
-config.patience = 5       # stop kalau 5 epoch tidak improve
+config.epochs = 50
+config.patience = 5
 
 # Load dataset
 data_dir = "data"
@@ -81,7 +81,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 model = model.to(device)
 
-# Loss, optimizer, scheduler
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
 total_steps = len(train_loader) * config.epochs
@@ -91,13 +90,15 @@ scheduler = get_linear_schedule_with_warmup(
     num_training_steps=total_steps
 )
 
-# Training loop
 best_val_f1 = 0.0
+best_val_acc = 0.0
+best_val_precision = 0.0
+best_val_recall = 0.0
+best_epoch = 0
 patience_counter = 0
 os.makedirs("model", exist_ok=True)
 
 for epoch in range(config.epochs):
-    # Train
     model.train()
     train_loss = 0.0
     all_preds, all_labels = [], []
@@ -119,7 +120,6 @@ for epoch in range(config.epochs):
     train_acc = accuracy_score(all_labels, all_preds)
     _, _, train_f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='weighted')
 
-    # Validation
     model.eval()
     val_loss = 0.0
     val_preds, val_labels_list = [], []
@@ -151,9 +151,12 @@ for epoch in range(config.epochs):
           f"Train Loss: {train_loss/len(train_loader):.4f} | Train Acc: {train_acc:.4f} | Train F1: {train_f1:.4f} | "
           f"Val Loss: {val_loss/len(val_loader):.4f} | Val Acc: {val_acc:.4f} | Val F1: {val_f1:.4f}")
 
-    # Save best model & early stopping
     if val_f1 > best_val_f1:
         best_val_f1 = val_f1
+        best_val_acc = val_acc
+        best_val_precision = val_precision
+        best_val_recall = val_recall
+        best_epoch = epoch + 1  # ✅ simpan epoch terbaik (1-indexed)
         patience_counter = 0
         torch.save(model.state_dict(), "model/resnet50_best.pth")
         print(f"  -> Best model saved (val_f1={val_f1:.4f})")
@@ -170,9 +173,21 @@ with open("model/label2id.json", "w") as f:
 with open("model/id2label.json", "w") as f:
     json.dump(id2label, f)
 
+# ✅ Simpan metrics dari epoch terbaik (bukan epoch terakhir)
+metrics = {
+    "val_accuracy": float(best_val_acc),
+    "val_f1": float(best_val_f1),
+    "val_precision": float(best_val_precision),
+    "val_recall": float(best_val_recall),
+    "best_epoch": best_epoch
+}
+
+with open("metrics_resnet.json", "w") as f:
+    json.dump(metrics, f, indent=2)
+
+print(f"Metrics saved to metrics_resnet.json (best epoch: {best_epoch})")
 print("Training complete. Uploading to Hugging Face Hub...")
 
-# Upload to Hugging Face Hub
 api = HfApi()
 repo_id = "ziyadazz/trashnet-resnet50"
 

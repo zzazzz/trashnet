@@ -12,14 +12,17 @@ with open("kaggle_output/metrics_swin.json", "r") as f:
 now = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 
 # Tentukan model terbaik
-best_model = "ResNet50" if metrics_resnet['val_f1'] > metrics_swin['val_f1'] else "Swin Transformer"
+best_model = "ResNet50" if metrics_resnet['val_f1'] >= metrics_swin['val_f1'] else "Swin Transformer"
 best_f1 = max(metrics_resnet['val_f1'], metrics_swin['val_f1'])
+
+def winner(a, b, label_a="ResNet50 🏆", label_b="Swin 🏆"):
+    return label_a if a >= b else label_b
 
 readme = f"""# 🗑️ Trashnet Image Classification
 
 > Auto-generated report · Last updated: **{now}**
 
-Proyek klasifikasi sampah menggunakan dua arsitektur deep learning yang dilatih dan dievaluasi secara otomatis via GitHub Actions + Kaggle GPU.
+Proyek klasifikasi sampah otomatis menggunakan dua arsitektur deep learning — **ResNet50** dan **Swin Transformer** — yang dilatih dan dievaluasi secara penuh via GitHub Actions + Kaggle GPU.
 
 ---
 
@@ -28,30 +31,36 @@ Proyek klasifikasi sampah menggunakan dua arsitektur deep learning yang dilatih 
 | | |
 |---|---|
 | **Model** | {best_model} |
-| **F1 Score** | {best_f1:.4f} |
+| **F1 Score** | `{best_f1:.4f}` |
 
 ---
 
-## 📊 Hasil Training
+## 📊 Hasil Evaluasi
 
 ### ResNet50
 
+> Convolutional Neural Network klasik dengan residual connections. Cepat, stabil, dan proven untuk image classification.
+
 | Metric | Value |
 |--------|-------|
-| ✅ Val Accuracy | `{metrics_resnet['val_accuracy']:.4f}` |
-| 🎯 Val F1 Score | `{metrics_resnet['val_f1']:.4f}` |
-| 🔍 Val Precision | `{metrics_resnet['val_precision']:.4f}` |
-| 🔁 Val Recall | `{metrics_resnet['val_recall']:.4f}` |
+| ✅ Accuracy | `{metrics_resnet['val_accuracy']:.4f}` |
+| 🎯 F1 Score | `{metrics_resnet['val_f1']:.4f}` |
+| 🔍 Precision | `{metrics_resnet['val_precision']:.4f}` |
+| 🔁 Recall | `{metrics_resnet['val_recall']:.4f}` |
 | 📈 Best Epoch | `{metrics_resnet['best_epoch']}` |
+
+---
 
 ### Swin Transformer
 
+> Vision Transformer berbasis Shifted Window. Unggul dalam menangkap long-range dependency antar patch gambar.
+
 | Metric | Value |
 |--------|-------|
-| ✅ Val Accuracy | `{metrics_swin['val_accuracy']:.4f}` |
-| 🎯 Val F1 Score | `{metrics_swin['val_f1']:.4f}` |
-| 🔍 Val Precision | `{metrics_swin['val_precision']:.4f}` |
-| 🔁 Val Recall | `{metrics_swin['val_recall']:.4f}` |
+| ✅ Accuracy | `{metrics_swin['val_accuracy']:.4f}` |
+| 🎯 F1 Score | `{metrics_swin['val_f1']:.4f}` |
+| 🔍 Precision | `{metrics_swin['val_precision']:.4f}` |
+| 🔁 Recall | `{metrics_swin['val_recall']:.4f}` |
 | 📈 Best Epoch | `{metrics_swin['best_epoch']}` |
 
 ---
@@ -60,10 +69,11 @@ Proyek klasifikasi sampah menggunakan dua arsitektur deep learning yang dilatih 
 
 | Metric | ResNet50 | Swin Transformer | Winner |
 |--------|----------|-----------------|--------|
-| Accuracy | `{metrics_resnet['val_accuracy']:.4f}` | `{metrics_swin['val_accuracy']:.4f}` | {"ResNet50 🏆" if metrics_resnet['val_accuracy'] > metrics_swin['val_accuracy'] else "Swin 🏆"} |
-| F1 Score | `{metrics_resnet['val_f1']:.4f}` | `{metrics_swin['val_f1']:.4f}` | {"ResNet50 🏆" if metrics_resnet['val_f1'] > metrics_swin['val_f1'] else "Swin 🏆"} |
-| Precision | `{metrics_resnet['val_precision']:.4f}` | `{metrics_swin['val_precision']:.4f}` | {"ResNet50 🏆" if metrics_resnet['val_precision'] > metrics_swin['val_precision'] else "Swin 🏆"} |
-| Recall | `{metrics_resnet['val_recall']:.4f}` | `{metrics_swin['val_recall']:.4f}` | {"ResNet50 🏆" if metrics_resnet['val_recall'] > metrics_swin['val_recall'] else "Swin 🏆"} |
+| Accuracy | `{metrics_resnet['val_accuracy']:.4f}` | `{metrics_swin['val_accuracy']:.4f}` | {winner(metrics_resnet['val_accuracy'], metrics_swin['val_accuracy'])} |
+| F1 Score | `{metrics_resnet['val_f1']:.4f}` | `{metrics_swin['val_f1']:.4f}` | {winner(metrics_resnet['val_f1'], metrics_swin['val_f1'])} |
+| Precision | `{metrics_resnet['val_precision']:.4f}` | `{metrics_swin['val_precision']:.4f}` | {winner(metrics_resnet['val_precision'], metrics_swin['val_precision'])} |
+| Recall | `{metrics_resnet['val_recall']:.4f}` | `{metrics_swin['val_recall']:.4f}` | {winner(metrics_resnet['val_recall'], metrics_swin['val_recall'])} |
+| Best Epoch | `{metrics_resnet['best_epoch']}` | `{metrics_swin['best_epoch']}` | - |
 
 ---
 
@@ -97,24 +107,29 @@ Proyek klasifikasi sampah menggunakan dua arsitektur deep learning yang dilatih 
 
 ## 🗂️ Dataset
 
-| Split | Kelas |
-|-------|-------|
-| `train/` | cardboard, glass, metal, paper, plastic, trash |
-| `val/` | cardboard, glass, metal, paper, plastic, trash |
-| `test/` | cardboard, glass, metal, paper, plastic, trash |
+6 kelas sampah dari dataset [TrashNet](https://github.com/garythung/trashnet):
+
+| Split | Jumlah |
+|-------|--------|
+| `train/` | ~3.500 gambar |
+| `val/` | ~756 gambar |
+| `test/` | ~763 gambar |
+
+**Kelas:** `cardboard`, `glass`, `metal`, `paper`, `plastic`, `trash`
 
 ---
 
 ## 🤗 Model Links
 
-| Model | Link |
-|-------|------|
+| Model | HuggingFace |
+|-------|-------------|
 | ResNet50 | [ziyadazz/trashnet-resnet50](https://huggingface.co/ziyadazz/trashnet-resnet50) |
 | Swin Transformer | [ziyadazz/trashnet-swin](https://huggingface.co/ziyadazz/trashnet-swin) |
 
 ---
 
 ## 📁 Project Structure
+
 ```
 .
 ├── .github/
@@ -124,9 +139,6 @@ Proyek klasifikasi sampah menggunakan dua arsitektur deep learning yang dilatih 
 │   ├── train/
 │   ├── val/
 │   └── test/
-├── kaggle_notebook/
-│   ├── kernel.py
-│   └── kernel-metadata.json
 ├── results/
 │   ├── confusion_matrix_resnet.png
 │   ├── confusion_matrix_swin.png
@@ -147,29 +159,16 @@ Proyek klasifikasi sampah menggunakan dua arsitektur deep learning yang dilatih 
 
 ---
 
-## ⚙️ Setup Instructions
+## ⚙️ Setup
 
-1. **Clone repository**:
 ```bash
-   git clone https://github.com/zzazzz/trashnet.git
-   cd trashnet
-```
-
-2. **Install dependencies**:
-```bash
-   pip install -r requirements.txt
-```
-
-3. **Jalankan training**:
-```bash
-   python model_training_resnet.py
-   python model_training_swin.py
-```
-
-4. **Jalankan validasi**:
-```bash
-   python validate_model_resnet.py
-   python validate_model_swin.py
+git clone https://github.com/zzazzz/trashnet.git
+cd trashnet
+pip install -r requirements.txt
+python model_training_resnet.py
+python model_training_swin.py
+python validate_model_resnet.py
+python validate_model_swin.py
 ```
 
 ---
@@ -177,6 +176,7 @@ Proyek klasifikasi sampah menggunakan dua arsitektur deep learning yang dilatih 
 ## 🔄 CI/CD Pipeline
 
 Pipeline otomatis berjalan setiap push ke `main`:
+
 ```
 Push ke main
     │
@@ -184,17 +184,17 @@ Push ke main
 Push script ke Kaggle dataset
     │
     ▼
-Tunggu dataset ready
-    │
-    ▼
-Trigger Kaggle notebook (GPU)
-    ├── Training ResNet50
-    ├── Training Swin Transformer
-    ├── Validasi ResNet50
-    └── Validasi Swin Transformer
+Trigger Kaggle notebook (GPU T4)
+    ├── Training ResNet50      → metrics_resnet.json
+    ├── Training Swin          → metrics_swin.json
+    ├── Validasi ResNet50      → *_resnet.png
+    └── Validasi Swin          → *_swin.png
     │
     ▼
 Download output dari Kaggle
+    │
+    ▼
+Copy gambar ke results/
     │
     ▼
 Generate README otomatis
@@ -206,6 +206,7 @@ Commit results + README ke GitHub
 ---
 
 ## 📦 Requirements
+
 ```
 torch
 torchvision
@@ -226,6 +227,6 @@ with open("README.md", "w", encoding="utf-8") as f:
     f.write(readme)
 
 print("README.md generated successfully!")
-print(f"  Best model: {best_model} (F1: {best_f1:.4f})")
-print(f"  ResNet50  — Acc: {metrics_resnet['val_accuracy']:.4f} | F1: {metrics_resnet['val_f1']:.4f}")
-print(f"  Swin      — Acc: {metrics_swin['val_accuracy']:.4f} | F1: {metrics_swin['val_f1']:.4f}")
+print(f"  Best model  : {best_model} (F1: {best_f1:.4f})")
+print(f"  ResNet50    — Acc: {metrics_resnet['val_accuracy']:.4f} | F1: {metrics_resnet['val_f1']:.4f} | Epoch: {metrics_resnet['best_epoch']}")
+print(f"  Swin        — Acc: {metrics_swin['val_accuracy']:.4f} | F1: {metrics_swin['val_f1']:.4f} | Epoch: {metrics_swin['best_epoch']}")

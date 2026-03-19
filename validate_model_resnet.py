@@ -5,29 +5,30 @@ import torch.nn as nn
 import numpy as np
 from torchvision import transforms, models
 from torch.utils.data import DataLoader, Dataset
-from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import (confusion_matrix, classification_report,
+                             accuracy_score, precision_recall_fscore_support)
 from huggingface_hub import snapshot_download
 from PIL import Image
 import seaborn as sns
 import matplotlib.pyplot as plt
 
 print("Loading model from Hugging Face Hub...")
-snapshot_download(repo_id="ziyadazz/trashnet-resnet50", local_dir="model_hf")
+snapshot_download(repo_id="ziyadazz/trashnet-resnet50", local_dir="model_hf_resnet")
 
 # Load label mappings
-with open("model_hf/id2label.json", "r") as f:
+with open("model_hf_resnet/id2label.json", "r") as f:
     id2label = {int(k): v for k, v in json.load(f).items()}
 
 num_classes = len(id2label)
 class_names = [id2label[i] for i in range(num_classes)]
 
-# Load ResNet50 model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
+# Load ResNet50
 model = models.resnet50(weights=None)
 model.fc = nn.Linear(model.fc.in_features, num_classes)
-model.load_state_dict(torch.load("model_hf/resnet50_best.pth", map_location=device))
+model.load_state_dict(torch.load("model_hf_resnet/resnet50_best.pth", map_location=device))
 model = model.to(device)
 model.eval()
 
@@ -100,11 +101,11 @@ plt.xlabel("Predicted")
 plt.ylabel("True")
 plt.title("Confusion Matrix - ResNet50")
 plt.tight_layout()
-plt.savefig("confusion_matrix.png", dpi=150)
+plt.savefig("confusion_matrix_resnet.png", dpi=150)   # ✅ suffix _resnet
 plt.close()
-print("Confusion matrix saved to confusion_matrix.png")
+print("Confusion matrix saved to confusion_matrix_resnet.png")
 
-# ── 2. Visualisasi 5 Sampel Per Kelas ───────────────────────────────────────
+# ── 2. 5 Sample Per Kelas ────────────────────────────────────────────────────
 SAMPLES_PER_CLASS = 5
 n_classes = len(class_names)
 
@@ -118,7 +119,7 @@ fig, axes = plt.subplots(
     n_classes, SAMPLES_PER_CLASS,
     figsize=(SAMPLES_PER_CLASS * 3, n_classes * 3)
 )
-fig.suptitle("5 Sample Per Kelas - Test Set", fontsize=16, fontweight="bold", y=1.01)
+fig.suptitle("5 Sample Per Kelas - Test Set (ResNet50)", fontsize=16, fontweight="bold", y=1.01)
 
 for row_idx, class_name in enumerate(class_names):
     paths = class_image_paths[class_name]
@@ -129,24 +130,23 @@ for row_idx, class_name in enumerate(class_names):
             ax.imshow(img)
         else:
             ax.imshow(np.ones((224, 224, 3), dtype=np.uint8) * 200)
-            ax.text(112, 112, "N/A", ha="center", va="center",
-                    fontsize=12, color="gray")
+            ax.text(112, 112, "N/A", ha="center", va="center", fontsize=12, color="gray")
         ax.axis("off")
         if col_idx == 0:
             ax.set_ylabel(class_name, fontsize=12, fontweight="bold",
                           rotation=0, labelpad=80, va="center")
 
 plt.tight_layout()
-plt.savefig("sample_per_class.png", dpi=150, bbox_inches="tight")
+plt.savefig("sample_per_class_resnet.png", dpi=150, bbox_inches="tight")  # ✅ suffix _resnet
 plt.close()
-print("Sample visualization saved to sample_per_class.png")
+print("Sample visualization saved to sample_per_class_resnet.png")
 
-# ── 3. Visualisasi Prediksi Benar vs Salah Per Kelas ────────────────────────
+# ── 3. Prediksi Benar vs Salah ───────────────────────────────────────────────
 fig, axes = plt.subplots(
     n_classes, SAMPLES_PER_CLASS,
     figsize=(SAMPLES_PER_CLASS * 3, n_classes * 3)
 )
-fig.suptitle("Contoh Prediksi Per Kelas (Hijau=Benar, Merah=Salah)",
+fig.suptitle("Contoh Prediksi Per Kelas - ResNet50 (Hijau=Benar, Merah=Salah)",
              fontsize=14, fontweight="bold", y=1.01)
 
 class_results = {class_name: [] for class_name in class_names}
@@ -181,13 +181,13 @@ for row_idx, class_name in enumerate(class_names):
                           rotation=0, labelpad=80, va="center")
 
 plt.tight_layout()
-plt.savefig("prediction_results.png", dpi=150, bbox_inches="tight")
+plt.savefig("prediction_results_resnet.png", dpi=150, bbox_inches="tight")  # ✅ suffix _resnet
 plt.close()
-print("Prediction results saved to prediction_results.png")
+print("Prediction results saved to prediction_results_resnet.png")
 
-# ── 4. Bar Chart Akurasi Per Kelas ──────────────────────────────────────────
+# ── 4. Akurasi Per Kelas ─────────────────────────────────────────────────────
 per_class_acc = []
-for i, class_name in enumerate(class_names):
+for i in range(len(class_names)):
     mask = true_labels == i
     if mask.sum() > 0:
         acc = (pred_labels[mask] == true_labels[mask]).mean()
@@ -211,33 +211,41 @@ for bar, acc in zip(bars, per_class_acc):
              f"{acc:.1f}%", ha="center", va="bottom", fontsize=10, fontweight="bold")
 
 plt.tight_layout()
-plt.savefig("accuracy_per_class.png", dpi=150)
+plt.savefig("accuracy_per_class_resnet.png", dpi=150)  # ✅ suffix _resnet
 plt.close()
-print("Accuracy per class saved to accuracy_per_class.png")
+print("Accuracy per class saved to accuracy_per_class_resnet.png")
 
-print("\nSemua output tersimpan:")
-print("  - confusion_matrix.png")
-print("  - sample_per_class.png")
-print("  - prediction_results.png")
-print("  - accuracy_per_class.png")
-
-import json
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-
+# ── 5. Metrics ───────────────────────────────────────────────────────────────
 val_acc = accuracy_score(true_labels, pred_labels)
 val_precision, val_recall, val_f1, _ = precision_recall_fscore_support(
     true_labels, pred_labels, average='weighted'
 )
+
+# ✅ best_epoch diambil dari metrics training yang sudah disimpan
+try:
+    with open("kaggle_output/metrics_resnet.json", "r") as f:
+        train_metrics = json.load(f)
+    best_epoch = train_metrics.get("best_epoch", 0)
+except FileNotFoundError:
+    best_epoch = 0
 
 metrics = {
     "val_accuracy": float(val_acc),
     "val_f1": float(val_f1),
     "val_precision": float(val_precision),
     "val_recall": float(val_recall),
-    "best_epoch": 0
+    "best_epoch": best_epoch
 }
 
 with open("metrics_resnet.json", "w") as f:
     json.dump(metrics, f, indent=2)
 
-print("Metrics saved to metrics_resnet.json")
+print("\nSemua output tersimpan:")
+print("  - confusion_matrix_resnet.png")
+print("  - sample_per_class_resnet.png")
+print("  - prediction_results_resnet.png")
+print("  - accuracy_per_class_resnet.png")
+print("  - metrics_resnet.json")
+print(f"\nTest Accuracy : {val_acc:.4f}")
+print(f"Test F1 Score : {val_f1:.4f}")
+print(f"Best Epoch    : {best_epoch}")
