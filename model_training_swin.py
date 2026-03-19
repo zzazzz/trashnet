@@ -6,7 +6,7 @@ from datasets import load_dataset
 from torchvision import transforms
 from torch.utils.data import DataLoader, Dataset
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-from transformers import SwinForImageClassification, get_linear_schedule_with_warmup
+from transformers import SwinForImageClassification, SwinConfig, AutoImageProcessor, get_linear_schedule_with_warmup
 from huggingface_hub import HfApi
 from PIL import Image
 import numpy as np
@@ -70,11 +70,19 @@ val_dataset = TrashDataset(ds["validation"], transform=val_transforms)
 train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=2)
 val_loader = DataLoader(val_dataset, batch_size=config.batch_size, shuffle=False, num_workers=2)
 
+# ✅ Fix: load via SwinConfig dulu, lalu from_pretrained dengan config
+# Ini menghindari auto feature extractor loading di transformers versi baru
+# Load image_processor dari microsoft supaya preprocessor_config.json yang
+# ter-upload ke HF selalu benar dan linked ke microsoft Swin
+image_processor = AutoImageProcessor.from_pretrained("microsoft/swin-base-patch4-window7-224")
+swin_config = SwinConfig.from_pretrained("microsoft/swin-base-patch4-window7-224")
+swin_config.num_labels = num_classes
+swin_config.id2label = id2label
+swin_config.label2id = label2id
+
 model = SwinForImageClassification.from_pretrained(
     "microsoft/swin-base-patch4-window7-224",
-    num_labels=num_classes,
-    id2label=id2label,
-    label2id=label2id,
+    config=swin_config,
     ignore_mismatched_sizes=True
 )
 
@@ -154,6 +162,7 @@ for epoch in range(config.epochs):
         best_epoch = epoch + 1
         patience_counter = 0
         model.save_pretrained("model_swin/swin_best")
+        image_processor.save_pretrained("model_swin/swin_best")
         print(f"  -> Best model saved (val_f1={val_f1:.4f})")
     else:
         patience_counter += 1
@@ -183,7 +192,6 @@ print("Training complete. Uploading to Hugging Face Hub...")
 
 api = HfApi()
 repo_id = "ziyadazz/trashnet-swin"
-
 api.create_repo(repo_id=repo_id, exist_ok=True)
 api.upload_folder(
     repo_id=repo_id,
