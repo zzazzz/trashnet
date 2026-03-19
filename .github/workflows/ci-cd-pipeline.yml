@@ -94,7 +94,16 @@ jobs:
       env:
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
-        cat > data/dataset-metadata.json << EOF
+        # Zip dari DALAM folder data/ agar struktur di Kaggle jadi:
+        # /kaggle/input/trashnet-data/train/, val/, test/  (tanpa prefix data/)
+        cd data
+        zip -r ../trashnet-data.zip train/ val/ test/
+        cd ..
+
+        mkdir -p kaggle_data_upload
+        mv trashnet-data.zip kaggle_data_upload/
+
+        cat > kaggle_data_upload/dataset-metadata.json << EOF
         {
           "title": "trashnet-data",
           "id": "$KAGGLE_USERNAME/trashnet-data",
@@ -102,24 +111,16 @@ jobs:
         }
         EOF
 
-        # Zip subfolder manual karena kaggle datasets version tidak support --dir-mode
-        cd data
-        zip -r train.zip train/
-        zip -r val.zip val/
-        zip -r test.zip test/
-        cd ..
-
-        # Cek pakai status - lebih reliable dari grep list
+        # Cek pakai status - create pertama kali, version kalau sudah ada
         if kaggle datasets status $KAGGLE_USERNAME/trashnet-data > /dev/null 2>&1; then
           echo "Dataset already exists, creating new version..."
-          kaggle datasets version -p data -m "Update dataset - ${{ github.sha }}"
+          kaggle datasets version -p kaggle_data_upload -m "Update dataset - ${{ github.sha }}"
         else
           echo "Dataset not found, creating for the first time..."
-          kaggle datasets create -p data --dir-mode zip
+          kaggle datasets create -p kaggle_data_upload
         fi
 
-        # Cleanup zip agar tidak ter-commit ke repo
-        rm -f data/train.zip data/val.zip data/test.zip
+        rm -rf kaggle_data_upload
 
     # =================================
     # Wait image dataset ready
