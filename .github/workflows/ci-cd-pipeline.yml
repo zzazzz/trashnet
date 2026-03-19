@@ -168,7 +168,8 @@ jobs:
         echo "trashnet-data version    : $DATA_VERSION"
         echo "trashnet-training-script : $SCRIPT_VERSION"
 
-        python3 -c "
+        # Tulis script Python ke file sementara untuk hindari YAML quote conflict
+        cat > /tmp/pin_versions.py << 'PYEOF'
 import json, os
 with open('kaggle_notebook/kernel-metadata.json', 'r') as f:
     meta = json.load(f)
@@ -181,7 +182,8 @@ meta['dataset_sources'] = [
 with open('kaggle_notebook/kernel-metadata.json', 'w') as f:
     json.dump(meta, f, indent=2)
 print('kernel-metadata.json updated:', meta['dataset_sources'])
-"
+PYEOF
+        python3 /tmp/pin_versions.py
 
         kaggle kernels push -p kaggle_notebook
 
