@@ -168,22 +168,7 @@ jobs:
         echo "trashnet-data version    : $DATA_VERSION"
         echo "trashnet-training-script : $SCRIPT_VERSION"
 
-        # Tulis script Python ke file sementara untuk hindari YAML quote conflict
-        cat > /tmp/pin_versions.py << 'PYEOF'
-import json, os
-with open('kaggle_notebook/kernel-metadata.json', 'r') as f:
-    meta = json.load(f)
-dv = os.environ.get('DATA_VERSION', '').strip()
-sv = os.environ.get('SCRIPT_VERSION', '').strip()
-meta['dataset_sources'] = [
-    'ziyadmuhammad/trashnet-training-script' + (':' + sv if sv else ''),
-    'ziyadmuhammad/trashnet-data' + (':' + dv if dv else ''),
-]
-with open('kaggle_notebook/kernel-metadata.json', 'w') as f:
-    json.dump(meta, f, indent=2)
-print('kernel-metadata.json updated:', meta['dataset_sources'])
-PYEOF
-        python3 /tmp/pin_versions.py
+        python3 scripts/pin_dataset_versions.py
 
         kaggle kernels push -p kaggle_notebook
 
