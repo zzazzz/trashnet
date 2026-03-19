@@ -1,8 +1,8 @@
 # 🗑️ Trashnet Image Classification
 
-> Auto-generated report · Last updated: **2026-03-19 06:56 UTC**
+> Auto-generated report · Last updated: **2026-03-19 12:39 UTC**
 
-Proyek klasifikasi sampah menggunakan dua arsitektur deep learning yang dilatih dan dievaluasi secara otomatis via GitHub Actions + Kaggle GPU.
+Proyek klasifikasi sampah otomatis menggunakan dua arsitektur deep learning — **ResNet50** dan **Swin Transformer** — yang dilatih dan dievaluasi secara penuh via GitHub Actions + Kaggle GPU.
 
 ---
 
@@ -11,31 +11,37 @@ Proyek klasifikasi sampah menggunakan dua arsitektur deep learning yang dilatih 
 | | |
 |---|---|
 | **Model** | Swin Transformer |
-| **F1 Score** | 0.9894 |
+| **F1 Score** | `0.9934` |
 
 ---
 
-## 📊 Hasil Training
+## 📊 Hasil Evaluasi
 
 ### ResNet50
 
+> Convolutional Neural Network klasik dengan residual connections. Cepat, stabil, dan proven untuk image classification.
+
 | Metric | Value |
 |--------|-------|
-| ✅ Val Accuracy | `0.9725` |
-| 🎯 Val F1 Score | `0.9723` |
-| 🔍 Val Precision | `0.9728` |
-| 🔁 Val Recall | `0.9725` |
-| 📈 Best Epoch | `0` |
+| ✅ Accuracy | `0.9830` |
+| 🎯 F1 Score | `0.9829` |
+| 🔍 Precision | `0.9831` |
+| 🔁 Recall | `0.9830` |
+| 📈 Best Epoch | `20` |
+
+---
 
 ### Swin Transformer
 
+> Vision Transformer berbasis Shifted Window. Unggul dalam menangkap long-range dependency antar patch gambar.
+
 | Metric | Value |
 |--------|-------|
-| ✅ Val Accuracy | `0.9895` |
-| 🎯 Val F1 Score | `0.9894` |
-| 🔍 Val Precision | `0.9896` |
-| 🔁 Val Recall | `0.9895` |
-| 📈 Best Epoch | `0` |
+| ✅ Accuracy | `0.9934` |
+| 🎯 F1 Score | `0.9934` |
+| 🔍 Precision | `0.9935` |
+| 🔁 Recall | `0.9934` |
+| 📈 Best Epoch | `13` |
 
 ---
 
@@ -43,10 +49,11 @@ Proyek klasifikasi sampah menggunakan dua arsitektur deep learning yang dilatih 
 
 | Metric | ResNet50 | Swin Transformer | Winner |
 |--------|----------|-----------------|--------|
-| Accuracy | `0.9725` | `0.9895` | Swin 🏆 |
-| F1 Score | `0.9723` | `0.9894` | Swin 🏆 |
-| Precision | `0.9728` | `0.9896` | Swin 🏆 |
-| Recall | `0.9725` | `0.9895` | Swin 🏆 |
+| Accuracy | `0.9830` | `0.9934` | Swin 🏆 |
+| F1 Score | `0.9829` | `0.9934` | Swin 🏆 |
+| Precision | `0.9831` | `0.9935` | Swin 🏆 |
+| Recall | `0.9830` | `0.9934` | Swin 🏆 |
+| Best Epoch | `20` | `13` | - |
 
 ---
 
@@ -80,24 +87,29 @@ Proyek klasifikasi sampah menggunakan dua arsitektur deep learning yang dilatih 
 
 ## 🗂️ Dataset
 
-| Split | Kelas |
-|-------|-------|
-| `train/` | cardboard, glass, metal, paper, plastic, trash |
-| `val/` | cardboard, glass, metal, paper, plastic, trash |
-| `test/` | cardboard, glass, metal, paper, plastic, trash |
+6 kelas sampah dari dataset [TrashNet](https://github.com/garythung/trashnet):
+
+| Split | Jumlah |
+|-------|--------|
+| `train/` | ~3.500 gambar |
+| `val/` | ~756 gambar |
+| `test/` | ~763 gambar |
+
+**Kelas:** `cardboard`, `glass`, `metal`, `paper`, `plastic`, `trash`
 
 ---
 
 ## 🤗 Model Links
 
-| Model | Link |
-|-------|------|
+| Model | HuggingFace |
+|-------|-------------|
 | ResNet50 | [ziyadazz/trashnet-resnet50](https://huggingface.co/ziyadazz/trashnet-resnet50) |
 | Swin Transformer | [ziyadazz/trashnet-swin](https://huggingface.co/ziyadazz/trashnet-swin) |
 
 ---
 
 ## 📁 Project Structure
+
 ```
 .
 ├── .github/
@@ -107,9 +119,6 @@ Proyek klasifikasi sampah menggunakan dua arsitektur deep learning yang dilatih 
 │   ├── train/
 │   ├── val/
 │   └── test/
-├── kaggle_notebook/
-│   ├── kernel.py
-│   └── kernel-metadata.json
 ├── results/
 │   ├── confusion_matrix_resnet.png
 │   ├── confusion_matrix_swin.png
@@ -130,29 +139,16 @@ Proyek klasifikasi sampah menggunakan dua arsitektur deep learning yang dilatih 
 
 ---
 
-## ⚙️ Setup Instructions
+## ⚙️ Setup
 
-1. **Clone repository**:
 ```bash
-   git clone https://github.com/zzazzz/trashnet.git
-   cd trashnet
-```
-
-2. **Install dependencies**:
-```bash
-   pip install -r requirements.txt
-```
-
-3. **Jalankan training**:
-```bash
-   python model_training_resnet.py
-   python model_training_swin.py
-```
-
-4. **Jalankan validasi**:
-```bash
-   python validate_model_resnet.py
-   python validate_model_swin.py
+git clone https://github.com/zzazzz/trashnet.git
+cd trashnet
+pip install -r requirements.txt
+python model_training_resnet.py
+python model_training_swin.py
+python validate_model_resnet.py
+python validate_model_swin.py
 ```
 
 ---
@@ -160,6 +156,7 @@ Proyek klasifikasi sampah menggunakan dua arsitektur deep learning yang dilatih 
 ## 🔄 CI/CD Pipeline
 
 Pipeline otomatis berjalan setiap push ke `main`:
+
 ```
 Push ke main
     │
@@ -167,17 +164,17 @@ Push ke main
 Push script ke Kaggle dataset
     │
     ▼
-Tunggu dataset ready
-    │
-    ▼
-Trigger Kaggle notebook (GPU)
-    ├── Training ResNet50
-    ├── Training Swin Transformer
-    ├── Validasi ResNet50
-    └── Validasi Swin Transformer
+Trigger Kaggle notebook (GPU T4)
+    ├── Training ResNet50      → metrics_resnet.json
+    ├── Training Swin          → metrics_swin.json
+    ├── Validasi ResNet50      → *_resnet.png
+    └── Validasi Swin          → *_swin.png
     │
     ▼
 Download output dari Kaggle
+    │
+    ▼
+Copy gambar ke results/
     │
     ▼
 Generate README otomatis
@@ -189,6 +186,7 @@ Commit results + README ke GitHub
 ---
 
 ## 📦 Requirements
+
 ```
 torch
 torchvision
