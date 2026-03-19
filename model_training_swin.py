@@ -6,7 +6,7 @@ from datasets import load_dataset
 from torchvision import transforms
 from torch.utils.data import DataLoader, Dataset
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-from transformers import SwinForImageClassification, SwinConfig, AutoImageProcessor, get_linear_schedule_with_warmup
+from transformers import SwinForImageClassification, SwinConfig, SwinImageProcessor
 from huggingface_hub import HfApi
 from PIL import Image
 import numpy as np
@@ -74,7 +74,9 @@ val_loader = DataLoader(val_dataset, batch_size=config.batch_size, shuffle=False
 # Ini menghindari auto feature extractor loading di transformers versi baru
 # Load image_processor dari microsoft supaya preprocessor_config.json yang
 # ter-upload ke HF selalu benar dan linked ke microsoft Swin
-image_processor = AutoImageProcessor.from_pretrained("microsoft/swin-base-patch4-window7-224")
+image_processor = SwinImageProcessor.from_pretrained(
+    "microsoft/swin-base-patch4-window7-224"
+)
 swin_config = SwinConfig.from_pretrained("microsoft/swin-base-patch4-window7-224")
 swin_config.num_labels = num_classes
 swin_config.id2label = id2label
