@@ -74,9 +74,17 @@ val_loader = DataLoader(val_dataset, batch_size=config.batch_size, shuffle=False
 # Ini menghindari auto feature extractor loading di transformers versi baru
 # Load image_processor dari microsoft supaya preprocessor_config.json yang
 # ter-upload ke HF selalu benar dan linked ke microsoft Swin
-image_processor = SwinImageProcessor.from_pretrained(
-    "microsoft/swin-base-patch4-window7-224"
+image_processor = SwinImageProcessor(
+    do_resize=True,
+    size={"height": 224, "width": 224},
+    resample=3,
+    do_rescale=True,
+    rescale_factor=1/255,
+    do_normalize=True,
+    image_mean=[0.485, 0.456, 0.406],
+    image_std=[0.229, 0.224, 0.225],
 )
+
 swin_config = SwinConfig.from_pretrained("microsoft/swin-base-patch4-window7-224")
 swin_config.num_labels = num_classes
 swin_config.id2label = id2label
