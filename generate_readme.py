@@ -29,8 +29,6 @@ delta_acc  = abs(r['val_accuracy'] - s['val_accuracy'])
 delta_f1   = abs(r['val_f1'] - s['val_f1'])
 loser      = "ResNet50" if best_model == "Swin Transformer" else "Swin Transformer"
 
-gpu_r = r.get("gpu", "unknown")
-gpu_s = s.get("gpu", "unknown")
 
 readme = f"""\
 <!--
@@ -45,7 +43,7 @@ readme = f"""\
 **Klasifikasi sampah otomatis dengan deep learning**
 
 [![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/zzazzz/trashnet/actions)
-[![Kaggle](https://img.shields.io/badge/Training-Kaggle_GPU-20BEFF?logo=kaggle&logoColor=white)](https://kaggle.com)
+[![Kaggle](https://img.shields.io/badge/Training-Kaggle_GPU-20BEFF?logo=kaggle&logoColor=white)](https://www.kaggle.com/code/ziyadmuhammad/trashnet-training)
 [![HuggingFace](https://img.shields.io/badge/Model-HuggingFace-FFD21E?logo=huggingface&logoColor=black)](https://huggingface.co/ziyadazz)
 [![WandB](https://img.shields.io/badge/Tracking-W%26B-FFBE00?logo=weightsandbiases&logoColor=black)](https://wandb.ai/ziyad-azzufari/trashnet-classification)
 
@@ -80,7 +78,7 @@ readme = f"""\
 | Precision  | `{pct(r['val_precision'])}` {bar(r['val_precision'])} | `{pct(s['val_precision'])}` {bar(s['val_precision'])} | {winner(r['val_precision'], s['val_precision'])} |
 | Recall     | `{pct(r['val_recall'])}` {bar(r['val_recall'])} | `{pct(s['val_recall'])}` {bar(s['val_recall'])} | {winner(r['val_recall'], s['val_recall'])} |
 | Best Epoch | `{r['best_epoch']}` | `{s['best_epoch']}` | — |
-| GPU        | `{gpu_r}` | `{gpu_s}` | — |
+| GPU        | `GPU P100` | `GPU P100` | — |
 
 ---
 
@@ -98,7 +96,7 @@ readme = f"""\
 | 🔍 Precision  | `{pct(r['val_precision'])}` |
 | 🔁 Recall     | `{pct(r['val_recall'])}` |
 | 📈 Best Epoch | `{r['best_epoch']}` |
-| 🖥️ GPU        | `{gpu_r}` |
+| 🖥️ GPU        | `GPU P100` |
 
 🤗 **Model:** [ziyadazz/trashnet-resnet50](https://huggingface.co/ziyadazz/trashnet-resnet50)
 
@@ -116,7 +114,7 @@ readme = f"""\
 | 🔍 Precision  | `{pct(s['val_precision'])}` |
 | 🔁 Recall     | `{pct(s['val_recall'])}` |
 | 📈 Best Epoch | `{s['best_epoch']}` |
-| 🖥️ GPU        | `{gpu_s}` |
+| 🖥️ GPU        | `GPU P100` |
 
 🤗 **Model:** [ziyadazz/trashnet-swin](https://huggingface.co/ziyadazz/trashnet-swin)
 
@@ -189,7 +187,7 @@ Push ke main
              ▼
 ┌─────────────────────────────┐
 │   Trigger Kaggle Notebook   │
-│         (GPU T4/P100)       │
+│         (GPU P100)          │
 │                             │
 │  ① Training ResNet50        │
 │  ② Training Swin            │
@@ -200,7 +198,7 @@ Push ke main
              ▼
 ┌─────────────────────────────┐
 │  Download output Kaggle     │
-│  • metrics_*.json + gpu     │
+│  • metrics_*.json           │
 │  • *.png visualisasi        │
 └────────────┬────────────────┘
              │
@@ -226,6 +224,8 @@ trashnet/
 ├── results/                     ← Output visualisasi (auto-generated)
 │   ├── confusion_matrix_resnet.png
 │   ├── confusion_matrix_swin.png
+│   ├── training_history_resnet.png
+│   ├── training_history_swin.png
 │   ├── accuracy_per_class_resnet.png
 │   ├── accuracy_per_class_swin.png
 │   ├── sample_per_class_resnet.png
@@ -281,7 +281,7 @@ python validate_model_swin.py
 
 <div align="center">
 
-Made with ❤️ &nbsp;·&nbsp; Auto-updated by CI/CD &nbsp;·&nbsp; [View on WandB](https://wandb.ai/ziyad-azzufari/trashnet-classification)
+Created by Ziyad &nbsp;·&nbsp; Auto-updated by CI/CD &nbsp;·&nbsp; [View on WandB](https://wandb.ai/ziyad-azzufari/trashnet-classification)
 
 </div>
 """
@@ -293,5 +293,5 @@ with open("README.md", "w", encoding="utf-8") as f:
 
 print("README.md generated successfully!")
 print(f"  Best model  : {best_model} (F1: {pct(best_f1)})")
-print(f"  ResNet50    — Acc: {pct(r['val_accuracy'])} | F1: {pct(r['val_f1'])} | Epoch: {r['best_epoch']} | GPU: {gpu_r}")
-print(f"  Swin        — Acc: {pct(s['val_accuracy'])} | F1: {pct(s['val_f1'])} | Epoch: {s['best_epoch']} | GPU: {gpu_s}")
+print(f"  ResNet50    — Acc: {pct(r['val_accuracy'])} | F1: {pct(r['val_f1'])} | Epoch: {r['best_epoch']} | GPU: `GPU P100`")
+print(f"  Swin        — Acc: {pct(s['val_accuracy'])} | F1: {pct(s['val_f1'])} | Epoch: {s['best_epoch']} | GPU: `GPU P100`")

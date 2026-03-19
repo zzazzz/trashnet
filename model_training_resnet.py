@@ -208,8 +208,7 @@ metrics = {
     "val_f1": float(best_val_f1),
     "val_precision": float(best_val_precision),
     "val_recall": float(best_val_recall),
-    "best_epoch": best_epoch,
-    "gpu": gpu_name
+    "best_epoch": best_epoch
 }
 
 with open("metrics_resnet.json", "w") as f:

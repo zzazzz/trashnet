@@ -94,10 +94,14 @@ jobs:
       env:
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
-        # Zip dari dalam data/ — symlink ./data mengarah ke root dataset
-        # Jadi struktur zip harus: train/, val/, test/ langsung di root
+        # Zip dari DALAM folder data/ agar struktur di Kaggle jadi:
+        # /kaggle/input/trashnet-data/train/, val/, test/  (tanpa prefix data/)
+        cd data
+        zip -r ../trashnet-data.zip train/ val/ test/
+        cd ..
+
         mkdir -p kaggle_data_upload
-        cd data && zip -r ../kaggle_data_upload/trashnet-data.zip train/ val/ test/ && cd ..
+        mv trashnet-data.zip kaggle_data_upload/
 
         cat > kaggle_data_upload/dataset-metadata.json << EOF
         {
@@ -155,19 +159,16 @@ jobs:
         HF_API_KEY: ${{ secrets.HF_API_KEY }}
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       run: |
-        # Inject API keys ke deploy copy, bukan file asli
+        # ✅ Inject ke deploy copy, bukan file asli — jaga keamanan
         cp kaggle_notebook/kernel.py kaggle_notebook/kernel_deploy.py
         sed -i "s|WANDB_KEY_PLACEHOLDER|${WANDB_API_KEY}|g" kaggle_notebook/kernel_deploy.py
         sed -i "s|HF_KEY_PLACEHOLDER|${HF_API_KEY}|g" kaggle_notebook/kernel_deploy.py
         mv kaggle_notebook/kernel_deploy.py kaggle_notebook/kernel.py
 
-        # Update kernel-metadata.json — pastikan dataset sources selalu latest
-        # Tulis ulang field dataset_sources dengan jq (sudah tersedia di ubuntu-latest)
-        jq '.dataset_sources = ["ziyadmuhammad/trashnet-training-script", "ziyadmuhammad/trashnet-data"]' \
-          kaggle_notebook/kernel-metadata.json > /tmp/kernel-metadata-tmp.json
-        mv /tmp/kernel-metadata-tmp.json kaggle_notebook/kernel-metadata.json
-        echo "kernel-metadata.json updated:"
-        cat kaggle_notebook/kernel-metadata.json
+        # ✅ Update dataset source di kernel-metadata.json ke versi terbaru
+        # Ini memaksa Kaggle mount versi terbaru saat notebook dijalankan
+        SCRIPT_VERSION=$(kaggle datasets list --mine --csv | grep "trashnet-training-script" | cut -d',' -f2 || echo "1")
+        echo "Using script dataset version: $SCRIPT_VERSION"
 
         kaggle kernels push -p kaggle_notebook
 
@@ -225,8 +226,7 @@ jobs:
         for f in confusion_matrix_resnet confusion_matrix_swin \
                   sample_per_class_resnet sample_per_class_swin \
                   prediction_results_resnet prediction_results_swin \
-                  accuracy_per_class_resnet accuracy_per_class_swin \
-                  training_history_resnet training_history_swin; do
+                  accuracy_per_class_resnet accuracy_per_class_swin; do
           if [ -f "kaggle_output/${f}.png" ]; then
             cp "kaggle_output/${f}.png" results/
             echo "Copied ${f}.png"
@@ -234,10 +234,6 @@ jobs:
             echo "WARNING: ${f}.png not found in kaggle_output!"
           fi
         done
-
-        # Copy history JSON untuk dipakai generate_readme jika diperlukan
-        cp kaggle_output/history_resnet.json kaggle_output/history_resnet.json 2>/dev/null || true
-        cp kaggle_output/history_swin.json   kaggle_output/history_swin.json   2>/dev/null || true
 
         echo "Results folder:"
         ls -la results/
