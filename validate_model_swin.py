@@ -13,10 +13,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 print("Loading model from Hugging Face Hub...")
-snapshot_download(repo_id="ziyadazz/trashnet-swin", local_dir="model_hf_swin")
+snapshot_download(repo_id="ziyadazz/trashnet-swin", local_dir="model_hf")
 
 # Load label mappings
-with open("model_hf_swin/id2label.json", "r") as f:
+with open("model_hf/id2label.json", "r") as f:
     id2label = {int(k): v for k, v in json.load(f).items()}
 
 num_classes = len(id2label)
@@ -26,7 +26,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
 # Load Swin model
-model = SwinForImageClassification.from_pretrained("model_hf_swin/swin_best")
+model = SwinForImageClassification.from_pretrained("model_hf/swin_best")
 model = model.to(device)
 model.eval()
 
@@ -67,6 +67,7 @@ class TestDataset(Dataset):
 
 test_dir = "data/test"
 test_dataset = TestDataset(test_dir, id2label, transform=val_transforms)
+print(f"Total test samples: {len(test_dataset)}")
 test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=2)
 
 # Inference
@@ -219,9 +220,9 @@ val_precision, val_recall, val_f1, _ = precision_recall_fscore_support(
     true_labels, pred_labels, average='weighted'
 )
 
-# ✅ best_epoch diambil dari metrics training yang sudah disimpan
+# best_epoch diambil dari metrics training yang disimpan di working dir
 try:
-    with open("kaggle_output/metrics_swin.json", "r") as f:
+    with open("metrics_swin.json", "r") as f:
         train_metrics = json.load(f)
     best_epoch = train_metrics.get("best_epoch", 0)
 except FileNotFoundError:

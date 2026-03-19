@@ -13,10 +13,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 print("Loading model from Hugging Face Hub...")
-snapshot_download(repo_id="ziyadazz/trashnet-resnet50", local_dir="model_hf_resnet")
+snapshot_download(repo_id="ziyadazz/trashnet-resnet50", local_dir="model_hf")
 
 # Load label mappings
-with open("model_hf_resnet/id2label.json", "r") as f:
+with open("model_hf/id2label.json", "r") as f:
     id2label = {int(k): v for k, v in json.load(f).items()}
 
 num_classes = len(id2label)
@@ -28,7 +28,7 @@ print(f"Using device: {device}")
 # Load ResNet50
 model = models.resnet50(weights=None)
 model.fc = nn.Linear(model.fc.in_features, num_classes)
-model.load_state_dict(torch.load("model_hf_resnet/resnet50_best.pth", map_location=device))
+model.load_state_dict(torch.load("model_hf/resnet50_best.pth", map_location=device))
 model = model.to(device)
 model.eval()
 
@@ -69,6 +69,7 @@ class TestDataset(Dataset):
 
 test_dir = "data/test"
 test_dataset = TestDataset(test_dir, id2label, transform=val_transforms)
+print(f"Total test samples: {len(test_dataset)}")
 test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=2)
 
 # Inference
@@ -221,9 +222,9 @@ val_precision, val_recall, val_f1, _ = precision_recall_fscore_support(
     true_labels, pred_labels, average='weighted'
 )
 
-# ✅ best_epoch diambil dari metrics training yang sudah disimpan
+# best_epoch diambil dari metrics training yang disimpan di working dir
 try:
-    with open("kaggle_output/metrics_resnet.json", "r") as f:
+    with open("metrics_resnet.json", "r") as f:
         train_metrics = json.load(f)
     best_epoch = train_metrics.get("best_epoch", 0)
 except FileNotFoundError:
